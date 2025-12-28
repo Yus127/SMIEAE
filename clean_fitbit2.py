@@ -29,6 +29,14 @@ def calculate_daily_aggregations(df):
             agg_dict[f'{col}_min'] = (col, 'min')
             agg_dict[f'{col}_max'] = (col, 'max')
     
+    # Special handling for heart_rate_activity_beats per minute column
+    hr_activity_col = 'heart_rate_activity_beats per minute'
+    if hr_activity_col in df.columns:
+        agg_dict[f'{hr_activity_col}_mean'] = (hr_activity_col, 'mean')
+        agg_dict[f'{hr_activity_col}_std'] = (hr_activity_col, 'std')
+        agg_dict[f'{hr_activity_col}_min'] = (hr_activity_col, 'min')
+        agg_dict[f'{hr_activity_col}_max'] = (hr_activity_col, 'max')
+    
     # HRV metrics (RMSSD)
     rmssd_cols = [col for col in df.columns if 'rmssd' in col.lower()]
     for col in rmssd_cols:
@@ -116,7 +124,7 @@ def calculate_daily_aggregations(df):
 
 def extract_sleep_metrics(df, midnight_mask):
     """
-    Extract additional sleep metrics from sleep data.
+    Extract comprehensive sleep metrics from sleep data.
     
     Args:
         df: DataFrame with sleep data
@@ -146,27 +154,121 @@ def extract_sleep_metrics(df, midnight_mask):
             if pd.notna(row[levels_col[0]]):
                 try:
                     levels_data = eval(row[levels_col[0]])
+                    
+                    # Extract from 'summary'
                     if 'summary' in levels_data:
                         summary = levels_data['summary']
                         
+                        # Deep sleep metrics
                         if 'deep' in summary:
                             record['deep_sleep_minutes'] = summary['deep'].get('minutes', np.nan)
                             record['deep_sleep_count'] = summary['deep'].get('count', np.nan)
+                            record['deep_sleep_30day_avg'] = summary['deep'].get('thirtyDayAvgMinutes', np.nan)
+                            # Deviation from 30-day average
+                            if summary['deep'].get('minutes') and summary['deep'].get('thirtyDayAvgMinutes'):
+                                record['deep_sleep_deviation_from_avg'] = summary['deep']['minutes'] - summary['deep']['thirtyDayAvgMinutes']
                         
+                        # Light sleep metrics
                         if 'light' in summary:
                             record['light_sleep_minutes'] = summary['light'].get('minutes', np.nan)
                             record['light_sleep_count'] = summary['light'].get('count', np.nan)
+                            record['light_sleep_30day_avg'] = summary['light'].get('thirtyDayAvgMinutes', np.nan)
+                            if summary['light'].get('minutes') and summary['light'].get('thirtyDayAvgMinutes'):
+                                record['light_sleep_deviation_from_avg'] = summary['light']['minutes'] - summary['light']['thirtyDayAvgMinutes']
                         
+                        # REM sleep metrics
                         if 'rem' in summary:
                             record['rem_sleep_minutes'] = summary['rem'].get('minutes', np.nan)
                             record['rem_sleep_count'] = summary['rem'].get('count', np.nan)
+                            record['rem_sleep_30day_avg'] = summary['rem'].get('thirtyDayAvgMinutes', np.nan)
+                            if summary['rem'].get('minutes') and summary['rem'].get('thirtyDayAvgMinutes'):
+                                record['rem_sleep_deviation_from_avg'] = summary['rem']['minutes'] - summary['rem']['thirtyDayAvgMinutes']
                         
+                        # Wake metrics
                         if 'wake' in summary:
                             record['wake_count'] = summary['wake'].get('count', np.nan)
                             record['wake_minutes'] = summary['wake'].get('minutes', np.nan)
+                            record['wake_30day_avg'] = summary['wake'].get('thirtyDayAvgMinutes', np.nan)
+                            if summary['wake'].get('minutes') and summary['wake'].get('thirtyDayAvgMinutes'):
+                                record['wake_deviation_from_avg'] = summary['wake']['minutes'] - summary['wake']['thirtyDayAvgMinutes']
+                        
+                        # Restless metrics (if present)
+                        if 'restless' in summary:
+                            record['restless_count'] = summary['restless'].get('count', np.nan)
+                            record['restless_minutes'] = summary['restless'].get('minutes', np.nan)
+                        
+                        # Asleep metrics (if present)
+                        if 'asleep' in summary:
+                            record['asleep_count'] = summary['asleep'].get('count', np.nan)
+                            record['asleep_minutes'] = summary['asleep'].get('minutes', np.nan)
+                    
+                    # Extract from 'data' (main sleep stage transitions)
+                    if 'data' in levels_data and levels_data['data']:
+                        data = levels_data['data']
+                        
+                        # Total number of sleep stage transitions
+                        record['sleep_stage_transitions'] = len(data)
+                        
+                        # Find time to first deep sleep and first REM
+                        sleep_start_time = pd.to_datetime(data[0]['dateTime']) if data else None
+                        
+                        first_deep_time = None
+                        first_rem_time = None
+                        
+                        for segment in data:
+                            seg_time = pd.to_datetime(segment['dateTime'])
+                            if segment['level'] == 'deep' and first_deep_time is None:
+                                first_deep_time = seg_time
+                            if segment['level'] == 'rem' and first_rem_time is None:
+                                first_rem_time = seg_time
+                        
+                        if sleep_start_time and first_deep_time:
+                            record['minutes_to_first_deep_sleep'] = (first_deep_time - sleep_start_time).total_seconds() / 60
+                        
+                        if sleep_start_time and first_rem_time:
+                            record['minutes_to_first_rem_sleep'] = (first_rem_time - sleep_start_time).total_seconds() / 60
+                        
+                        # Calculate average segment duration per sleep stage
+                        stage_durations = {'deep': [], 'light': [], 'rem': [], 'wake': []}
+                        for segment in data:
+                            level = segment['level']
+                            if level in stage_durations:
+                                stage_durations[level].append(segment['seconds'] / 60)  # Convert to minutes
+                        
+                        for stage, durations in stage_durations.items():
+                            if durations:
+                                record[f'{stage}_avg_segment_duration_minutes'] = np.mean(durations)
+                                record[f'{stage}_segment_duration_std'] = np.std(durations) if len(durations) > 1 else 0
+                        
+                        # Last sleep stage before waking
+                        if data:
+                            record['last_sleep_stage'] = data[-1]['level']
+                    
+                    # Extract from 'shortData' (micro-awakenings)
+                    if 'shortData' in levels_data and levels_data['shortData']:
+                        short_data = levels_data['shortData']
+                        
+                        # Count micro-awakenings
+                        record['micro_awakening_count'] = len(short_data)
+                        
+                        # Total duration of micro-awakenings
+                        total_micro_wake_seconds = sum(segment['seconds'] for segment in short_data)
+                        record['micro_awakening_total_minutes'] = total_micro_wake_seconds / 60
+                        
+                        # Calculate micro-awakening frequency per hour
+                        if 'data' in levels_data and levels_data['data']:
+                            total_sleep_duration_hours = sum(seg['seconds'] for seg in levels_data['data']) / 3600
+                            if total_sleep_duration_hours > 0:
+                                record['micro_awakening_per_hour'] = len(short_data) / total_sleep_duration_hours
+                        
+                        # Average micro-awakening duration
+                        if short_data:
+                            record['micro_awakening_avg_duration_seconds'] = np.mean([seg['seconds'] for seg in short_data])
+                            record['micro_awakening_max_duration_seconds'] = max(seg['seconds'] for seg in short_data)
+                    
                 except Exception as e:
                     # If parsing fails, just add the date
-                    pass
+                    print(f"Warning: Could not parse sleep levels for date {record['date']}: {str(e)}")
             
             sleep_records.append(record)
     
@@ -184,8 +286,27 @@ def process_csv_file(input_path, output_dir="processed_data"):
         input_path: Path to the input CSV file
         output_dir: Directory to save processed files
     """
+    # Columns to remove from the dataset
+    columns_to_remove = [
+        'active_minutes_data source',
+        'activity_level_data source',
+        'heart_rate_activity_data source',
+        'spo2_activity_data source',
+        'hrv_activity_data source',
+        'heart_rate_activity_heart rate notification type',
+        'heart_rate_activity_heart rate threshold beats per minute',
+        'heart_rate_activity_heart rate trigger value beats per minute'
+    ]
+    
     # Read the CSV with low_memory=False to avoid dtype warnings
     df = pd.read_csv(input_path, low_memory=False)
+    
+    # Remove unwanted columns if they exist
+    df = df.drop(columns=[col for col in columns_to_remove if col in df.columns], errors='ignore')
+    
+    # Remove any columns containing "stress" (case-insensitive)
+    stress_columns = [col for col in df.columns if 'stress' in col.lower()]
+    df = df.drop(columns=stress_columns, errors='ignore')
     
     # Parse timestamp column (assuming it's the first column)
     # Use format='mixed' to handle different timestamp formats
@@ -241,6 +362,10 @@ def process_csv_file(input_path, output_dir="processed_data"):
     if not daily_agg.empty:
         daily_df = daily_df.merge(daily_agg, on='date', how='outer')
     
+    # Remove any columns containing "stress" from the final daily summary (case-insensitive)
+    stress_columns_daily = [col for col in daily_df.columns if 'stress' in col.lower()]
+    daily_df = daily_df.drop(columns=stress_columns_daily, errors='ignore')
+    
     # Create time-series DataFrame (without daily-only columns)
     timeseries_df = df[timeseries_columns].copy()
     timeseries_df = timeseries_df.dropna(how='all', subset=[col for col in timeseries_columns if col != 'timestamp'])
@@ -295,4 +420,5 @@ if __name__ == "__main__":
     # process_multiple_csvs("path/to/your/csv/directory", output_dir="processed_data")
     
     # Example with current directory
+
     process_multiple_csvs("/Users/YusMolina/Downloads/smieae/data/original_data/fitbit/consolidated_output", output_dir="/Users/YusMolina/Downloads/smieae/data/data_clean/fitbit")
