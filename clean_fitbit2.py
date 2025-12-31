@@ -75,13 +75,17 @@ def calculate_daily_aggregations(df):
             agg_dict[f'{col}_mean'] = (col, 'mean')
             agg_dict[f'{col}_std'] = (col, 'std')
     
-    # SpO2 metrics
+    # SpO2 metrics - filter out values of 50 (likely sensor errors)
     spo2_cols = [col for col in df.columns if 'spo2' in col.lower() and 'value' in col.lower()]
     for col in spo2_cols:
         if df[col].notna().any():
-            agg_dict[f'{col}_mean'] = (col, 'mean')
-            agg_dict[f'{col}_std'] = (col, 'std')
-            agg_dict[f'{col}_min'] = (col, 'min')
+            # Create a filtered version excluding values of 50
+            filtered_col = f'{col}_filtered'
+            df[filtered_col] = df[col].apply(lambda x: x if pd.notna(x) and x != 50 else np.nan)
+            
+            agg_dict[f'{col}_mean'] = (filtered_col, 'mean')
+            agg_dict[f'{col}_std'] = (filtered_col, 'std')
+            agg_dict[f'{col}_min'] = (filtered_col, 'min')
     
     # Steps
     steps_cols = [col for col in df.columns if 'steps' in col.lower() and 'steps' == col.lower().split('_')[-1]]
@@ -107,6 +111,10 @@ def calculate_daily_aggregations(df):
     # Perform aggregation
     if agg_dict:
         daily_agg = df.groupby('date').agg(**agg_dict).reset_index()
+        
+        # Clean up: remove the temporary filtered SpO2 columns from the result
+        filtered_cols = [col for col in daily_agg.columns if '_filtered' in col]
+        daily_agg = daily_agg.drop(columns=filtered_cols, errors='ignore')
         
         # Add activity level counts if available
         if level_cols:
@@ -366,6 +374,34 @@ def process_csv_file(input_path, output_dir="processed_data"):
     stress_columns_daily = [col for col in daily_df.columns if 'stress' in col.lower()]
     daily_df = daily_df.drop(columns=stress_columns_daily, errors='ignore')
     
+    # Remove active_minutes columns (they contain mostly zeros and are redundant)
+    active_minutes_cols = [
+        'active_minutes_light_total',
+        'active_minutes_moderate_total', 
+        'active_minutes_very_total',
+        'respiratory_rate_summary_deep_sleep_breathing_rate_std',
+        'respiratory_rate_summary_rem_sleep_signal_to_noise_std',
+        'respiratory_rate_summary_rem_sleep_breathing_rate_std',
+        'respiratory_rate_summary_light_sleep_signal_to_noise_std',
+        'respiratory_rate_summary_light_sleep_breathing_rate_std',
+        'respiratory_rate_summary_deep_sleep_signal_to_noise_std',
+        'respiratory_rate_summary_full_sleep_breathing_rate_std',
+        'respiratory_rate_summary_full_sleep_signal_to_noise_std',
+        'asleep_minutes',
+        'asleep_count',
+        'restless_minutes',
+        'restless_count'
+
+
+    ]
+    daily_df = daily_df.drop(columns=[col for col in active_minutes_cols if col in daily_df.columns], errors='ignore')
+    
+    # Remove duplicate 'date' columns if they exist (keep only one)
+    date_cols = [col for col in daily_df.columns if col == 'date']
+    if len(date_cols) > 1:
+        # Keep the first one, remove duplicates
+        daily_df = daily_df.loc[:, ~daily_df.columns.duplicated()]
+    
     # Create time-series DataFrame (without daily-only columns)
     timeseries_df = df[timeseries_columns].copy()
     timeseries_df = timeseries_df.dropna(how='all', subset=[col for col in timeseries_columns if col != 'timestamp'])
@@ -420,5 +456,4 @@ if __name__ == "__main__":
     # process_multiple_csvs("path/to/your/csv/directory", output_dir="processed_data")
     
     # Example with current directory
-
     process_multiple_csvs("/Users/YusMolina/Downloads/smieae/data/original_data/fitbit/consolidated_output", output_dir="/Users/YusMolina/Downloads/smieae/data/data_clean/fitbit")
