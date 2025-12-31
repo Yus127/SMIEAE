@@ -2,143 +2,188 @@ import pandas as pd
 import numpy as np
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import NearestNeighbors
 from pathlib import Path
+from glob import glob
+import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings('ignore')
 
 
-class DBSCANProcessor:
+class FitbitDBSCANProcessor:
     """
-    Reusable processor for applying DBSCAN to multiple CSV files with missing data handling.
+    DBSCAN processor for specific Fitbit health variables with forward-fill imputation.
     """
     
-    def __init__(self, missing_threshold=0.20, eps=0.5, min_samples=5, 
-                 remove_outliers=False, z_threshold=3.0):
+    def __init__(self, eps=0.5, min_samples=5, auto_tune=False):
         """
         Initialize the processor.
         
         Parameters:
         -----------
-        missing_threshold : float
-            Maximum proportion of missing values allowed (0.20 = 20%)
         eps : float
             DBSCAN epsilon parameter (maximum distance between two samples)
         min_samples : int
             DBSCAN minimum samples in a neighborhood for a core point
-        remove_outliers : bool
-            Whether to remove extreme outliers based on z-score before clustering
-        z_threshold : float
-            Z-score threshold for outlier removal (typically 3.0)
+        auto_tune : bool
+            If True, automatically find optimal eps using k-distance graph
         """
-        self.missing_threshold = missing_threshold
         self.eps = eps
         self.min_samples = min_samples
-        self.remove_outliers = remove_outliers
-        self.z_threshold = z_threshold
-        self.scaler = StandardScaler()  # StandardScaler performs z-score normalization
+        self.auto_tune = auto_tune
+        self.scaler = StandardScaler()  # For z-score normalization
         
-    def load_and_clean_csv(self, filepath):
+        # Define the specific variables we want to use
+        self.target_columns = [
+             'hrv_details_rmssd_mean',
+            'daily_hrv_summary_rmssd',
+            'daily_spo2_average_value',
+            'heart_rate_activity_beats per minute_mean',
+            'heart_rate_activity_beats per minute_std',
+            'minute_spo2_value_mean'
+        
+        ]
+        """    'hrv_details_rmssd_mean',
+            'daily_hrv_summary_rmssd',
+            'daily_spo2_average_value',
+            'heart_rate_activity_beats per minute_mean',
+            'heart_rate_activity_beats per minute_std',
+            'minute_spo2_value_mean'
+
+
+            'sleep_global_minutesAsleep',
+            'sleep_global_efficiency',
+            'sleep_global_minutesAwake',
+            'daily_respiratory_rate_daily_respiratory_rate',
+            'daily_total_steps',
+            
+            """
+    
+    def load_and_prepare_data(self, filepath):
         """
-        Load CSV and handle missing values according to the threshold.
+        Load CSV and prepare the specific variables with forward-fill imputation.
         
         Returns:
         --------
-        pd.DataFrame : Cleaned dataframe
-        dict : Statistics about the cleaning process
+        pd.DataFrame : Cleaned dataframe with selected variables
+        dict : Statistics about the preparation process
         """
         df = pd.read_csv(filepath)
         original_shape = df.shape
+        
         stats = {
             'original_rows': original_shape[0],
             'original_cols': original_shape[1],
-            'columns_dropped': [],
-            'columns_imputed': [],
+            'columns_found': [],
+            'columns_missing': [],
+            'missing_values_before': {},
+            'missing_values_after': {},
             'rows_dropped': 0
         }
         
-        # Calculate missing percentage for each column
-        missing_pct = df.isnull().sum() / len(df)
+        # Check which columns exist in the dataframe
+        available_cols = []
+        for col in self.target_columns:
+            if col in df.columns:
+                available_cols.append(col)
+                stats['columns_found'].append(col)
+                stats['missing_values_before'][col] = df[col].isnull().sum()
+            else:
+                stats['columns_missing'].append(col)
         
-        # Separate numeric and non-numeric columns
-        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        if not available_cols:
+            return pd.DataFrame(), stats
         
-        # Handle columns based on missing data percentage
-        for col in numeric_cols:
-            if missing_pct[col] > self.missing_threshold:
-                df = df.drop(columns=[col])
-                stats['columns_dropped'].append(col)
-            elif missing_pct[col] > 0:
-                # Impute with mean for columns within threshold
-                df[col].fillna(df[col].mean(), inplace=True)
-                stats['columns_imputed'].append(col)
+        # Select only the available target columns
+        df_selected = df[available_cols].copy()
         
-        # Drop non-numeric columns (or you can encode them if needed)
-        non_numeric_cols = df.select_dtypes(exclude=[np.number]).columns.tolist()
-        if non_numeric_cols:
-            df = df.drop(columns=non_numeric_cols)
-            stats['columns_dropped'].extend(non_numeric_cols)
+        # Fill missing values with forward fill (use previous values)
+        # Then backward fill for any remaining NaN at the start
+        df_filled = df_selected.fillna(method='ffill').fillna(method='bfill')
         
-        # Drop rows with any remaining NaN values
-        rows_before = len(df)
-        df = df.dropna()
-        stats['rows_dropped'] = rows_before - len(df)
-        stats['final_shape'] = df.shape
+        # If still NaN values remain (entire column is NaN), fill with column mean
+        for col in df_filled.columns:
+            if df_filled[col].isnull().any():
+                df_filled[col].fillna(df_filled[col].mean(), inplace=True)
         
-        return df, stats
+        # Track missing values after imputation
+        for col in available_cols:
+            stats['missing_values_after'][col] = df_filled[col].isnull().sum()
+        
+        # Drop any remaining rows with NaN (should be rare after the above steps)
+        rows_before = len(df_filled)
+        df_final = df_filled.dropna()
+        stats['rows_dropped'] = rows_before - len(df_final)
+        stats['final_shape'] = df_final.shape
+        stats['columns_used'] = len(available_cols)
+        
+        return df_final, stats
     
-    def remove_outliers_zscore(self, df):
+    def find_optimal_eps(self, X_normalized, k=None):
         """
-        Remove extreme outliers using z-score method.
+        Find optimal eps using k-distance graph (elbow method).
         
+        Parameters:
+        -----------
+        X_normalized : array
+            Normalized data
+        k : int
+            Number of neighbors (if None, uses min_samples)
+            
         Returns:
         --------
-        pd.DataFrame : Dataframe with outliers removed
-        int : Number of rows removed
+        float : Suggested eps value
         """
-        if not self.remove_outliers:
-            return df, 0
+        if k is None:
+            k = self.min_samples
         
-        rows_before = len(df)
+        # Calculate k-nearest neighbors distances
+        neighbors = NearestNeighbors(n_neighbors=k)
+        neighbors.fit(X_normalized)
+        distances, indices = neighbors.kneighbors(X_normalized)
         
-        # Calculate z-scores for all numeric columns
-        z_scores = np.abs((df - df.mean()) / df.std())
+        # Sort distances
+        distances = np.sort(distances[:, k-1], axis=0)
         
-        # Keep rows where all z-scores are below threshold
-        df_filtered = df[(z_scores < self.z_threshold).all(axis=1)]
+        # Find the elbow point (point of maximum curvature)
+        # Simple heuristic: use 90th percentile of distances
+        suggested_eps = np.percentile(distances, 90)
         
-        rows_removed = rows_before - len(df_filtered)
-        
-        return df_filtered, rows_removed
+        return suggested_eps, distances
     
-    def apply_dbscan(self, df):
+    def apply_dbscan_with_zscore(self, df):
         """
-        Apply DBSCAN clustering to the dataframe with z-score normalization.
+        Apply z-score normalization and DBSCAN clustering.
         
         Returns:
         --------
         np.array : Cluster labels
-        pd.DataFrame : Original data with cluster labels
+        pd.DataFrame : Original data with cluster labels and z-scores
         dict : Clustering statistics
         """
         if df.empty:
-            return None, None, {'error': 'Empty dataframe after cleaning'}
+            return None, None, {'error': 'Empty dataframe'}
         
-        # Apply z-score normalization (StandardScaler)
-        # This transforms each feature to have mean=0 and std=1
-        X_scaled = self.scaler.fit_transform(df)
+        # Apply z-score normalization (mean=0, std=1)
+        X_normalized = self.scaler.fit_transform(df)
         
-        # Optional: Create a dataframe to show the z-scores
-        z_score_df = pd.DataFrame(X_scaled, columns=df.columns, index=df.index)
+        # Create dataframe with z-scores for reference
+        z_score_df = pd.DataFrame(
+            X_normalized, 
+            columns=[f'{col}_zscore' for col in df.columns],
+            index=df.index
+        )
         
         # Apply DBSCAN on normalized data
         dbscan = DBSCAN(eps=self.eps, min_samples=self.min_samples)
-        labels = dbscan.fit_predict(X_scaled)
+        labels = dbscan.fit_predict(X_normalized)
         
-        # Add labels to original dataframe (not z-scored)
+        # Combine original data with z-scores and cluster labels
         result_df = df.copy()
+        result_df = pd.concat([result_df, z_score_df], axis=1)
         result_df['cluster'] = labels
         
-        # Calculate statistics
+        # Calculate clustering statistics
         unique_labels = set(labels)
         n_clusters = len(unique_labels) - (1 if -1 in labels else 0)
         n_noise = list(labels).count(-1)
@@ -146,17 +191,26 @@ class DBSCANProcessor:
         stats = {
             'n_clusters': n_clusters,
             'n_noise_points': n_noise,
-            'noise_percentage': (n_noise / len(labels)) * 100,
+            'noise_percentage': (n_noise / len(labels)) * 100 if len(labels) > 0 else 0,
+            'total_points': len(labels),
             'cluster_sizes': {},
-            'z_score_stats': {
-                'mean_z_score': np.mean(np.abs(X_scaled)),
-                'max_z_score': np.max(np.abs(X_scaled))
-            }
+            'normalization_stats': {}
         }
         
+        # Cluster size distribution
         for label in unique_labels:
             if label != -1:
-                stats['cluster_sizes'][f'cluster_{label}'] = list(labels).count(label)
+                count = list(labels).count(label)
+                stats['cluster_sizes'][f'cluster_{label}'] = count
+        
+        # Normalization statistics for each feature
+        for i, col in enumerate(df.columns):
+            stats['normalization_stats'][col] = {
+                'original_mean': df[col].mean(),
+                'original_std': df[col].std(),
+                'z_score_mean': X_normalized[:, i].mean(),
+                'z_score_std': X_normalized[:, i].std()
+            }
         
         return labels, result_df, stats
     
@@ -168,47 +222,103 @@ class DBSCANProcessor:
         --------
         dict : Complete results including data and statistics
         """
-        print(f"\nProcessing: {filepath}")
+        filename = Path(filepath).name
+        print(f"\nProcessing: {filename}")
         
-        # Load and clean
-        df_cleaned, cleaning_stats = self.load_and_clean_csv(filepath)
-        print(f"  Cleaned: {cleaning_stats['final_shape'][0]} rows, {cleaning_stats['final_shape'][1]} columns")
-        
-        if df_cleaned.empty:
-            print("  Warning: No data remaining after cleaning")
-            return {'error': 'No data after cleaning', 'cleaning_stats': cleaning_stats}
-        
-        # Remove outliers if enabled
-        df_no_outliers, outliers_removed = self.remove_outliers_zscore(df_cleaned)
-        if outliers_removed > 0:
-            print(f"  Removed {outliers_removed} outlier rows (z-score > {self.z_threshold})")
-            cleaning_stats['outliers_removed'] = outliers_removed
-        
-        # Apply DBSCAN with z-score normalization
-        labels, result_df, cluster_stats = self.apply_dbscan(df_no_outliers)
-        print(f"  Z-score normalization applied (mean z-score: {cluster_stats['z_score_stats']['mean_z_score']:.2f})")
-        print(f"  Clusters found: {cluster_stats['n_clusters']}")
-        print(f"  Noise points: {cluster_stats['n_noise_points']} ({cluster_stats['noise_percentage']:.1f}%)")
+        try:
+            # Load and prepare data
+            df_prepared, prep_stats = self.load_and_prepare_data(filepath)
+            
+            if df_prepared.empty:
+                print(f"  Warning: No usable data found")
+                return {'error': 'No usable data', 'prep_stats': prep_stats}
+            
+            print(f"  Variables found: {prep_stats['columns_used']}/{len(self.target_columns)}")
+            print(f"  Data shape: {prep_stats['final_shape']}")
+            
+            # Show imputation details
+            total_imputed = sum(prep_stats['missing_values_before'].values())
+            if total_imputed > 0:
+                print(f"  Imputed {total_imputed} missing values using forward-fill method")
+            
+            # Apply DBSCAN with z-score normalization
+            labels, result_df, cluster_stats = self.apply_dbscan_with_zscore(df_prepared)
+            
+            if cluster_stats is None or 'error' in cluster_stats:
+                error_msg = cluster_stats.get('error', 'Unknown error') if cluster_stats else 'Clustering failed'
+                print(f"  Error during clustering: {error_msg}")
+                return {'error': error_msg, 'prep_stats': prep_stats}
+            
+            print(f"  Z-score normalization: Applied (all features scaled)")
+            eps_val = cluster_stats.get('eps_used', self.eps)
+            min_samp_val = cluster_stats.get('min_samples_used', self.min_samples)
+            print(f"  DBSCAN parameters: eps={eps_val:.3f}, min_samples={min_samp_val}")
+            print(f"  Clusters found: {cluster_stats['n_clusters']}")
+            print(f"  Noise points: {cluster_stats['n_noise_points']} ({cluster_stats['noise_percentage']:.1f}%)")
+            
+            if cluster_stats['cluster_sizes']:
+                print(f"  Cluster distribution: {cluster_stats['cluster_sizes']}")
+            elif cluster_stats['n_clusters'] == 0:
+                print(f"  ⚠️  WARNING: All points classified as noise. Try increasing eps or decreasing min_samples.")
+            
+        except Exception as e:
+            import traceback
+            print(f"  Exception occurred: {str(e)}")
+            print(f"  Traceback: {traceback.format_exc()}")
+            return {'error': str(e)}
         
         # Save results if output directory provided
         if output_dir:
             output_path = Path(output_dir)
             output_path.mkdir(parents=True, exist_ok=True)
             
-            filename = Path(filepath).stem
-            result_df.to_csv(output_path / f"{filename}_clustered.csv", index=False)
+            file_stem = Path(filepath).stem
             
-            # Save statistics
-            stats_df = pd.DataFrame({
-                'metric': list(cleaning_stats.keys()) + list(cluster_stats.keys()),
-                'value': list(cleaning_stats.values()) + list(cluster_stats.values())
-            })
-            stats_df.to_csv(output_path / f"{filename}_stats.csv", index=False)
+            # Save clustered data with z-scores
+            result_df.to_csv(output_path / f"{file_stem}_clustered.csv", index=False)
+            
+            # Save detailed statistics
+            stats_summary = {
+                'Preparation': prep_stats,
+                'Clustering': cluster_stats
+            }
+            
+            # Create a readable stats file
+            with open(output_path / f"{file_stem}_stats.txt", 'w') as f:
+                f.write(f"Analysis Report for {filename}\n")
+                f.write("="*60 + "\n\n")
+                
+                f.write("DATA PREPARATION\n")
+                f.write(f"Original dimensions: {prep_stats['original_rows']} rows x {prep_stats['original_cols']} cols\n")
+                f.write(f"Variables used: {prep_stats['columns_used']}\n")
+                f.write(f"Variables found: {', '.join(prep_stats['columns_found'])}\n")
+                if prep_stats['columns_missing']:
+                    f.write(f"Variables missing: {', '.join(prep_stats['columns_missing'])}\n")
+                f.write(f"\nMissing values imputed:\n")
+                for col, count in prep_stats['missing_values_before'].items():
+                    f.write(f"  {col}: {count}\n")
+                
+                f.write(f"\n\nCLUSTERING RESULTS\n")
+                f.write(f"DBSCAN parameters: eps={cluster_stats.get('eps_used', 'N/A')}, min_samples={cluster_stats.get('min_samples_used', 'N/A')}\n")
+                f.write(f"Number of clusters: {cluster_stats['n_clusters']}\n")
+                f.write(f"Noise points: {cluster_stats['n_noise_points']} ({cluster_stats['noise_percentage']:.1f}%)\n")
+                f.write(f"Total points: {cluster_stats['total_points']}\n")
+                
+                if cluster_stats['cluster_sizes']:
+                    f.write(f"\nCluster sizes:\n")
+                    for cluster, size in cluster_stats['cluster_sizes'].items():
+                        f.write(f"  {cluster}: {size} points\n")
+                
+                f.write(f"\n\nNORMALIZATION DETAILS (Z-SCORES)\n")
+                for var, norm_stats in cluster_stats['normalization_stats'].items():
+                    f.write(f"\n{var}:\n")
+                    f.write(f"  Original: mean={norm_stats['original_mean']:.2f}, std={norm_stats['original_std']:.2f}\n")
+                    f.write(f"  Z-score: mean={norm_stats['z_score_mean']:.4f}, std={norm_stats['z_score_std']:.4f}\n")
         
         return {
             'data': result_df,
             'labels': labels,
-            'cleaning_stats': cleaning_stats,
+            'prep_stats': prep_stats,
             'cluster_stats': cluster_stats
         }
     
@@ -240,17 +350,13 @@ class DBSCANProcessor:
         return results
 
 
-# Example usage
+# Main execution
 if __name__ == "__main__":
-    from glob import glob
-    
-    # Initialize processor
-    processor = DBSCANProcessor(
-        missing_threshold=0.20,  # 20% missing data threshold
-        eps=0.5,                 # Adjust based on your data scale after z-score normalization
-        min_samples=5,           # Adjust based on your dataset size
-        remove_outliers=True,    # Remove extreme outliers before clustering
-        z_threshold=3.0          # Consider points with |z-score| > 3 as outliers
+    # Initialize processor with auto-tuning enabled
+    processor = FitbitDBSCANProcessor(
+        eps=2.0,            # Starting eps (will be auto-tuned if auto_tune=True)
+        min_samples=3,      # Lower min_samples for smaller datasets (try 2-5)
+        auto_tune=True      # Automatically find optimal eps
     )
     
     # Find all consolidated daily summary CSV files
@@ -258,9 +364,16 @@ if __name__ == "__main__":
     csv_files = glob(f'{data_path}/*_consolidated_daily_summary.csv')
     
     print(f"Found {len(csv_files)} files to process")
+    print(f"\nDBSCAN Configuration:")
+    print(f"  Initial eps: {processor.eps}")
+    print(f"  Min samples: {processor.min_samples}")
+    print(f"  Auto-tune: {processor.auto_tune}")
+    print(f"\nTarget variables:")
+    for i, var in enumerate(processor.target_columns, 1):
+        print(f"  {i}. {var}")
     
     # Process all files
-    output_dir = f'{data_path}/dbscan_results'
+    output_dir = f'{data_path}/dbscan_results2'
     results = processor.process_multiple_files(csv_files, output_dir=output_dir)
     
     # Print comprehensive summary
@@ -270,23 +383,31 @@ if __name__ == "__main__":
     
     successful = 0
     failed = 0
+    total_clusters = 0
     
     for filename, result in results.items():
         if 'error' not in result:
             successful += 1
+            n_clusters = result['cluster_stats']['n_clusters']
+            total_clusters += n_clusters
             print(f"\n{filename}:")
-            print(f"  Clusters: {result['cluster_stats']['n_clusters']}")
-            print(f"  Noise points: {result['cluster_stats']['n_noise_points']} ({result['cluster_stats']['noise_percentage']:.1f}%)")
-            print(f"  Final dimensions: {result['cleaning_stats']['final_shape']}")
+            print(f"  ✓ Clusters: {n_clusters}")
+            print(f"  ✓ Noise: {result['cluster_stats']['noise_percentage']:.1f}%")
+            print(f"  ✓ Variables: {result['prep_stats']['columns_used']}")
         else:
             failed += 1
-            print(f"\n{filename}: FAILED - {result['error']}")
+            print(f"\n{filename}: ✗ FAILED - {result['error']}")
     
     print(f"\n{'='*60}")
     print(f"Successfully processed: {successful}/{len(csv_files)}")
     print(f"Failed: {failed}/{len(csv_files)}")
+    print(f"Average clusters per file: {total_clusters/successful:.1f}" if successful > 0 else "N/A")
     print(f"\nResults saved to: {output_dir}")
+    print(f"  - *_clustered.csv: Original data + z-scores + cluster labels")
+    print(f"  - *_stats.txt: Detailed analysis report")
     print("="*60)
+
+
     ## WHAT IF I CHOOSE THE VARIABLES AND DO THE DBSCAN IN THE STRESS LEVELS
     """
     Para DBSCAN (outliers) necesitas **pocas variables (4–10 máximo)**, **bien escaladas**, y en tu caso casi siempre **por usuario** (o normalizadas por usuario). Si metes las ~100 columnas, DBSCAN va a fallar o va a detectar “missingness” en vez de eventos reales.
