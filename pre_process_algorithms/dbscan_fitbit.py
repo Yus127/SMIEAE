@@ -12,7 +12,8 @@ class DBSCANProcessor:
     Reusable processor for applying DBSCAN to multiple CSV files with missing data handling.
     """
     
-    def __init__(self, missing_threshold=0.20, eps=0.5, min_samples=5):
+    def __init__(self, missing_threshold=0.20, eps=0.5, min_samples=5, 
+                 remove_outliers=False, z_threshold=3.0):
         """
         Initialize the processor.
         
@@ -24,11 +25,17 @@ class DBSCANProcessor:
             DBSCAN epsilon parameter (maximum distance between two samples)
         min_samples : int
             DBSCAN minimum samples in a neighborhood for a core point
+        remove_outliers : bool
+            Whether to remove extreme outliers based on z-score before clustering
+        z_threshold : float
+            Z-score threshold for outlier removal (typically 3.0)
         """
         self.missing_threshold = missing_threshold
         self.eps = eps
         self.min_samples = min_samples
-        self.scaler = StandardScaler()
+        self.remove_outliers = remove_outliers
+        self.z_threshold = z_threshold
+        self.scaler = StandardScaler()  # StandardScaler performs z-score normalization
         
     def load_and_clean_csv(self, filepath):
         """
@@ -79,9 +86,33 @@ class DBSCANProcessor:
         
         return df, stats
     
+    def remove_outliers_zscore(self, df):
+        """
+        Remove extreme outliers using z-score method.
+        
+        Returns:
+        --------
+        pd.DataFrame : Dataframe with outliers removed
+        int : Number of rows removed
+        """
+        if not self.remove_outliers:
+            return df, 0
+        
+        rows_before = len(df)
+        
+        # Calculate z-scores for all numeric columns
+        z_scores = np.abs((df - df.mean()) / df.std())
+        
+        # Keep rows where all z-scores are below threshold
+        df_filtered = df[(z_scores < self.z_threshold).all(axis=1)]
+        
+        rows_removed = rows_before - len(df_filtered)
+        
+        return df_filtered, rows_removed
+    
     def apply_dbscan(self, df):
         """
-        Apply DBSCAN clustering to the dataframe.
+        Apply DBSCAN clustering to the dataframe with z-score normalization.
         
         Returns:
         --------
@@ -92,14 +123,18 @@ class DBSCANProcessor:
         if df.empty:
             return None, None, {'error': 'Empty dataframe after cleaning'}
         
-        # Standardize features
+        # Apply z-score normalization (StandardScaler)
+        # This transforms each feature to have mean=0 and std=1
         X_scaled = self.scaler.fit_transform(df)
         
-        # Apply DBSCAN
+        # Optional: Create a dataframe to show the z-scores
+        z_score_df = pd.DataFrame(X_scaled, columns=df.columns, index=df.index)
+        
+        # Apply DBSCAN on normalized data
         dbscan = DBSCAN(eps=self.eps, min_samples=self.min_samples)
         labels = dbscan.fit_predict(X_scaled)
         
-        # Add labels to dataframe
+        # Add labels to original dataframe (not z-scored)
         result_df = df.copy()
         result_df['cluster'] = labels
         
@@ -112,7 +147,11 @@ class DBSCANProcessor:
             'n_clusters': n_clusters,
             'n_noise_points': n_noise,
             'noise_percentage': (n_noise / len(labels)) * 100,
-            'cluster_sizes': {}
+            'cluster_sizes': {},
+            'z_score_stats': {
+                'mean_z_score': np.mean(np.abs(X_scaled)),
+                'max_z_score': np.max(np.abs(X_scaled))
+            }
         }
         
         for label in unique_labels:
@@ -139,8 +178,15 @@ class DBSCANProcessor:
             print("  Warning: No data remaining after cleaning")
             return {'error': 'No data after cleaning', 'cleaning_stats': cleaning_stats}
         
-        # Apply DBSCAN
-        labels, result_df, cluster_stats = self.apply_dbscan(df_cleaned)
+        # Remove outliers if enabled
+        df_no_outliers, outliers_removed = self.remove_outliers_zscore(df_cleaned)
+        if outliers_removed > 0:
+            print(f"  Removed {outliers_removed} outlier rows (z-score > {self.z_threshold})")
+            cleaning_stats['outliers_removed'] = outliers_removed
+        
+        # Apply DBSCAN with z-score normalization
+        labels, result_df, cluster_stats = self.apply_dbscan(df_no_outliers)
+        print(f"  Z-score normalization applied (mean z-score: {cluster_stats['z_score_stats']['mean_z_score']:.2f})")
         print(f"  Clusters found: {cluster_stats['n_clusters']}")
         print(f"  Noise points: {cluster_stats['n_noise_points']} ({cluster_stats['noise_percentage']:.1f}%)")
         
@@ -196,32 +242,48 @@ class DBSCANProcessor:
 
 # Example usage
 if __name__ == "__main__":
+    from glob import glob
+    
     # Initialize processor
     processor = DBSCANProcessor(
         missing_threshold=0.20,  # 20% missing data threshold
-        eps=0.5,                 # Adjust based on your data scale
-        min_samples=5            # Adjust based on your dataset size
+        eps=0.5,                 # Adjust based on your data scale after z-score normalization
+        min_samples=5,           # Adjust based on your dataset size
+        remove_outliers=True,    # Remove extreme outliers before clustering
+        z_threshold=3.0          # Consider points with |z-score| > 3 as outliers
     )
     
-    # Single file example
-    # result = processor.process_single_file('your_file.csv', output_dir='output')
+    # Find all consolidated daily summary CSV files
+    data_path = '/Users/YusMolina/Downloads/smieae/data/data_clean/fitbit'
+    csv_files = glob(f'{data_path}/*_consolidated_daily_summary.csv')
     
-    # Multiple files example
-    csv_files = [
-        'file1.csv',
-        'file2.csv',
-        # Add all 36 files here
-    ]
+    print(f"Found {len(csv_files)} files to process")
     
-    # Or use glob to find all CSV files in a directory
-    # from glob import glob
-    # csv_files = glob('data/*.csv')
+    # Process all files
+    output_dir = f'{data_path}/dbscan_results'
+    results = processor.process_multiple_files(csv_files, output_dir=output_dir)
     
-    # results = processor.process_multiple_files(csv_files, output_dir='output')
+    # Print comprehensive summary
+    print("\n" + "="*60)
+    print("PROCESSING COMPLETE - SUMMARY")
+    print("="*60)
     
-    # Print summary
-    # for filename, result in results.items():
-    #     if 'error' not in result:
-    #         print(f"\n{filename}:")
-    #         print(f"  Clusters: {result['cluster_stats']['n_clusters']}")
-    #         print(f"  Noise: {result['cluster_stats']['noise_percentage']:.1f}%")
+    successful = 0
+    failed = 0
+    
+    for filename, result in results.items():
+        if 'error' not in result:
+            successful += 1
+            print(f"\n{filename}:")
+            print(f"  Clusters: {result['cluster_stats']['n_clusters']}")
+            print(f"  Noise points: {result['cluster_stats']['n_noise_points']} ({result['cluster_stats']['noise_percentage']:.1f}%)")
+            print(f"  Final dimensions: {result['cleaning_stats']['final_shape']}")
+        else:
+            failed += 1
+            print(f"\n{filename}: FAILED - {result['error']}")
+    
+    print(f"\n{'='*60}")
+    print(f"Successfully processed: {successful}/{len(csv_files)}")
+    print(f"Failed: {failed}/{len(csv_files)}")
+    print(f"\nResults saved to: {output_dir}")
+    print("="*60)
