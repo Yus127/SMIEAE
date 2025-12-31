@@ -1,0 +1,650 @@
+======================================================================
+DBSCAN CLUSTERING ANALYSIS SUMMARY
+Stress and Anxiety Patterns
+======================================================================
+
+OVERALL CLUSTERING RESULTS
+----------------------------------------------------------------------
+Total data points analyzed: 3603
+Number of clusters identified: 1
+Number of noise/outlier points: 0
+Percentage of data classified as noise: 0.00%
+
+Cluster Distribution:
+  Cluster 0: 3603 points (100.00%)
+
+======================================================================
+PER-USER ANALYSIS
+======================================================================
+
+USER 1
+----------------------------------------------------------------------
+Total entries: 121
+Date range: 2025-02-19 to 2025-06-22
+
+Cluster Distribution:
+  Cluster 0: 121 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 26.39 (±12.41)
+  Overall Anxiety: 27.38 (±15.93)
+
+USER 2
+----------------------------------------------------------------------
+Total entries: 102
+Date range: 2025-02-18 to 2025-06-13
+
+Cluster Distribution:
+  Cluster 0: 102 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 25.80 (±20.43)
+  Overall Anxiety: 22.82 (±20.70)
+
+USER 3
+----------------------------------------------------------------------
+Total entries: 14
+Date range: 2025-02-26 to 2025-04-29
+
+Cluster Distribution:
+  Cluster 0: 14 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 54.86 (±19.54)
+  Overall Anxiety: 54.29 (±20.01)
+
+USER 4
+----------------------------------------------------------------------
+Total entries: 118
+Date range: 2025-02-14 to 2025-06-13
+
+Cluster Distribution:
+  Cluster 0: 118 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 12.05 (±10.52)
+  Overall Anxiety: 14.41 (±12.79)
+
+USER 5
+----------------------------------------------------------------------
+Total entries: 135
+Date range: 2025-02-14 to 2025-06-29
+
+Cluster Distribution:
+  Cluster 0: 135 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 24.73 (±24.36)
+  Overall Anxiety: 25.67 (±28.08)
+
+USER 6
+----------------------------------------------------------------------
+Total entries: 105
+Date range: 2025-02-21 to 2025-06-20
+
+Cluster Distribution:
+  Cluster 0: 105 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 26.10 (±21.79)
+  Overall Anxiety: 32.21 (±23.26)
+
+USER 7
+----------------------------------------------------------------------
+Total entries: 103
+Date range: 2025-02-17 to 2025-06-11
+
+Cluster Distribution:
+  Cluster 0: 103 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 20.14 (±12.88)
+  Overall Anxiety: 9.26 (±8.58)
+
+USER 8
+----------------------------------------------------------------------
+Total entries: 104
+Date range: 2025-02-17 to 2025-06-11
+
+Cluster Distribution:
+  Cluster 0: 104 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 38.32 (±19.05)
+  Overall Anxiety: 55.67 (±18.75)
+
+USER 9
+----------------------------------------------------------------------
+Total entries: 60
+Date range: 2025-02-22 to 2025-06-13
+
+Cluster Distribution:
+  Cluster 0: 60 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 42.52 (±15.25)
+  Overall Anxiety: 59.88 (±20.14)
+
+USER 10
+----------------------------------------------------------------------
+Total entries: 115
+Date range: 2025-02-20 to 2025-06-22
+
+Cluster Distribution:
+  Cluster 0: 115 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 51.29 (±38.82)
+  Overall Anxiety: 50.88 (±38.55)
+
+USER 11
+----------------------------------------------------------------------
+Total entries: 39
+Date range: 2025-02-25 to 2025-05-15
+
+Cluster Distribution:
+  Cluster 0: 39 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 27.49 (±13.25)
+  Overall Anxiety: 29.00 (±21.92)
+
+USER 12
+----------------------------------------------------------------------
+Total entries: 55
+Date range: 2025-02-16 to 2025-06-03
+
+Cluster Distribution:
+  Cluster 0: 55 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 25.64 (±20.40)
+  Overall Anxiety: 24.53 (±19.95)
+
+USER 13
+----------------------------------------------------------------------
+Total entries: 88
+Date range: 2025-02-19 to 2025-06-07
+
+Cluster Distribution:
+  Cluster 0: 88 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 46.38 (±10.93)
+  Overall Anxiety: 45.45 (±11.76)
+
+USER 14
+----------------------------------------------------------------------
+Total entries: 40
+Date range: 2025-02-20 to 2025-04-12
+
+Cluster Distribution:
+  Cluster 0: 40 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 29.32 (±20.54)
+  Overall Anxiety: 33.05 (±16.72)
+
+USER 15
+----------------------------------------------------------------------
+Total entries: 59
+Date range: 2025-02-24 to 2025-06-07
+
+Cluster Distribution:
+  Cluster 0: 59 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 22.66 (±17.35)
+  Overall Anxiety: 34.19 (±19.57)
+
+USER 16
+----------------------------------------------------------------------
+Total entries: 71
+Date range: 2025-02-17 to 2025-06-19
+
+Cluster Distribution:
+  Cluster 0: 71 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 31.52 (±25.48)
+  Overall Anxiety: 41.42 (±32.59)
+
+USER 17
+----------------------------------------------------------------------
+Total entries: 116
+Date range: 2025-02-24 to 2025-06-21
+
+Cluster Distribution:
+  Cluster 0: 116 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 20.63 (±12.70)
+  Overall Anxiety: 19.20 (±14.63)
+
+USER 18
+----------------------------------------------------------------------
+Total entries: 83
+Date range: 2025-02-24 to 2025-06-09
+
+Cluster Distribution:
+  Cluster 0: 83 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 40.33 (±17.76)
+  Overall Anxiety: 43.99 (±17.43)
+
+USER 19
+----------------------------------------------------------------------
+Total entries: 116
+Date range: 2025-02-19 to 2025-06-23
+
+Cluster Distribution:
+  Cluster 0: 116 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 19.49 (±18.58)
+  Overall Anxiety: 16.98 (±15.31)
+
+USER 20
+----------------------------------------------------------------------
+Total entries: 100
+Date range: 2025-02-19 to 2025-06-20
+
+Cluster Distribution:
+  Cluster 0: 100 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 17.76 (±10.98)
+  Overall Anxiety: 25.24 (±14.93)
+
+USER 21
+----------------------------------------------------------------------
+Total entries: 59
+Date range: 2025-03-13 to 2025-06-29
+
+Cluster Distribution:
+  Cluster 0: 59 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 35.20 (±14.45)
+  Overall Anxiety: 35.78 (±16.61)
+
+USER 22
+----------------------------------------------------------------------
+Total entries: 117
+Date range: 2025-03-05 to 2025-07-09
+
+Cluster Distribution:
+  Cluster 0: 117 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 18.89 (±15.14)
+  Overall Anxiety: 36.64 (±22.76)
+
+USER 23
+----------------------------------------------------------------------
+Total entries: 76
+Date range: 2025-03-09 to 2025-06-30
+
+Cluster Distribution:
+  Cluster 0: 76 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 89.22 (±14.34)
+  Overall Anxiety: 92.66 (±11.49)
+
+USER 24
+----------------------------------------------------------------------
+Total entries: 108
+Date range: 2025-03-19 to 2025-07-04
+
+Cluster Distribution:
+  Cluster 0: 108 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 46.14 (±34.20)
+  Overall Anxiety: 52.69 (±34.39)
+
+USER 25
+----------------------------------------------------------------------
+Total entries: 7
+Date range: 2025-03-13 to 2025-05-15
+
+Cluster Distribution:
+  Cluster 0: 7 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 45.71 (±17.90)
+  Overall Anxiety: 43.43 (±20.28)
+
+USER 26
+----------------------------------------------------------------------
+Total entries: 102
+Date range: 2025-03-06 to 2025-07-02
+
+Cluster Distribution:
+  Cluster 0: 102 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 28.75 (±10.10)
+  Overall Anxiety: 26.79 (±10.72)
+
+USER 27
+----------------------------------------------------------------------
+Total entries: 116
+Date range: 2025-03-07 to 2025-07-03
+
+Cluster Distribution:
+  Cluster 0: 116 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 43.83 (±23.18)
+  Overall Anxiety: 42.48 (±22.21)
+
+USER 28
+----------------------------------------------------------------------
+Total entries: 108
+Date range: 2025-03-10 to 2025-06-30
+
+Cluster Distribution:
+  Cluster 0: 108 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 23.50 (±22.11)
+  Overall Anxiety: 22.55 (±23.54)
+
+USER 29
+----------------------------------------------------------------------
+Total entries: 115
+Date range: 2025-03-13 to 2025-07-08
+
+Cluster Distribution:
+  Cluster 0: 115 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 27.05 (±23.76)
+  Overall Anxiety: 37.17 (±29.90)
+
+USER 30
+----------------------------------------------------------------------
+Total entries: 108
+Date range: 2025-03-16 to 2025-07-04
+
+Cluster Distribution:
+  Cluster 0: 108 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 27.33 (±23.39)
+  Overall Anxiety: 33.22 (±26.95)
+
+USER 31
+----------------------------------------------------------------------
+Total entries: 50
+Date range: 2025-03-13 to 2025-05-14
+
+Cluster Distribution:
+  Cluster 0: 50 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 74.08 (±16.92)
+  Overall Anxiety: 72.56 (±21.97)
+
+USER 32
+----------------------------------------------------------------------
+Total entries: 116
+Date range: 2025-03-06 to 2025-07-03
+
+Cluster Distribution:
+  Cluster 0: 116 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 62.48 (±20.84)
+  Overall Anxiety: 34.30 (±24.10)
+
+USER 33
+----------------------------------------------------------------------
+Total entries: 115
+Date range: 2025-03-04 to 2025-07-01
+
+Cluster Distribution:
+  Cluster 0: 115 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 31.48 (±17.44)
+  Overall Anxiety: 12.47 (±9.58)
+
+USER 34
+----------------------------------------------------------------------
+Total entries: 111
+Date range: 2025-03-06 to 2025-07-04
+
+Cluster Distribution:
+  Cluster 0: 111 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 49.09 (±24.35)
+  Overall Anxiety: 49.20 (±26.21)
+
+USER 35
+----------------------------------------------------------------------
+Total entries: 81
+Date range: 2025-04-06 to 2025-06-30
+
+Cluster Distribution:
+  Cluster 0: 81 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 17.48 (±16.40)
+  Overall Anxiety: 19.16 (±12.80)
+
+USER 36
+----------------------------------------------------------------------
+Total entries: 28
+Date range: 2025-09-27 to 2025-11-22
+
+Cluster Distribution:
+  Cluster 0: 28 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 71.11 (±23.84)
+  Overall Anxiety: 71.86 (±26.66)
+
+USER 37
+----------------------------------------------------------------------
+Total entries: 49
+Date range: 2025-10-14 to 2025-12-03
+
+Cluster Distribution:
+  Cluster 0: 49 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 30.16 (±29.48)
+  Overall Anxiety: 29.41 (±32.30)
+
+USER 39
+----------------------------------------------------------------------
+Total entries: 65
+Date range: 2025-09-26 to 2025-12-03
+
+Cluster Distribution:
+  Cluster 0: 65 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 37.65 (±33.13)
+  Overall Anxiety: 27.82 (±35.97)
+
+USER 41
+----------------------------------------------------------------------
+Total entries: 56
+Date range: 2025-09-26 to 2025-12-01
+
+Cluster Distribution:
+  Cluster 0: 56 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 41.64 (±31.01)
+  Overall Anxiety: 32.45 (±30.20)
+
+USER 42
+----------------------------------------------------------------------
+Total entries: 68
+Date range: 2025-09-25 to 2025-12-03
+
+Cluster Distribution:
+  Cluster 0: 68 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 26.21 (±24.34)
+  Overall Anxiety: 29.10 (±26.43)
+
+USER 44
+----------------------------------------------------------------------
+Total entries: 17
+Date range: 2025-09-27 to 2025-10-28
+
+Cluster Distribution:
+  Cluster 0: 17 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 11.88 (±6.95)
+  Overall Anxiety: 5.47 (±3.47)
+
+USER 46
+----------------------------------------------------------------------
+Total entries: 55
+Date range: 2025-10-09 to 2025-12-03
+
+Cluster Distribution:
+  Cluster 0: 55 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 12.53 (±10.22)
+  Overall Anxiety: 12.31 (±10.38)
+
+USER 47
+----------------------------------------------------------------------
+Total entries: 42
+Date range: 2025-10-10 to 2025-12-02
+
+Cluster Distribution:
+  Cluster 0: 42 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 52.40 (±28.63)
+  Overall Anxiety: 55.21 (±29.97)
+
+USER 50
+----------------------------------------------------------------------
+Total entries: 48
+Date range: 2025-10-15 to 2025-12-03
+
+Cluster Distribution:
+  Cluster 0: 48 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 35.00 (±24.92)
+  Overall Anxiety: 40.08 (±28.86)
+
+USER 54
+----------------------------------------------------------------------
+Total entries: 1
+Date range: 2025-10-21 to 2025-10-21
+
+Cluster Distribution:
+  Cluster 0: 1 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 70.00 (±nan)
+  Overall Anxiety: 84.00 (±nan)
+
+USER 55
+----------------------------------------------------------------------
+Total entries: 41
+Date range: 2025-10-13 to 2025-12-02
+
+Cluster Distribution:
+  Cluster 0: 41 entries (100.0%)
+
+Average Stress and Anxiety Levels:
+  Overall Stress: 31.12 (±11.24)
+  Overall Anxiety: 33.27 (±11.83)
+
+======================================================================
+CLUSTER CHARACTERISTICS
+======================================================================
+
+CLUSTER 0
+----------------------------------------------------------------------
+Number of points: 3603
+Percentage of total data: 100.00%
+
+Stress Levels:
+  Mean: 33.38
+  Std Dev: 26.12
+  Range: 0 - 100
+
+Anxiety Levels:
+  Mean: 34.20
+  Std Dev: 27.74
+  Range: 0 - 100
+
+User distribution in this cluster:
+  User 1: 121 points (3.4%)
+  User 2: 102 points (2.8%)
+  User 3: 14 points (0.4%)
+  User 4: 118 points (3.3%)
+  User 5: 135 points (3.7%)
+  User 6: 105 points (2.9%)
+  User 7: 103 points (2.9%)
+  User 8: 104 points (2.9%)
+  User 9: 60 points (1.7%)
+  User 10: 115 points (3.2%)
+  User 11: 39 points (1.1%)
+  User 12: 55 points (1.5%)
+  User 13: 88 points (2.4%)
+  User 14: 40 points (1.1%)
+  User 15: 59 points (1.6%)
+  User 16: 71 points (2.0%)
+  User 17: 116 points (3.2%)
+  User 18: 83 points (2.3%)
+  User 19: 116 points (3.2%)
+  User 20: 100 points (2.8%)
+  User 21: 59 points (1.6%)
+  User 22: 117 points (3.2%)
+  User 23: 76 points (2.1%)
+  User 24: 108 points (3.0%)
+  User 25: 7 points (0.2%)
+  User 26: 102 points (2.8%)
+  User 27: 116 points (3.2%)
+  User 28: 108 points (3.0%)
+  User 29: 115 points (3.2%)
+  User 30: 108 points (3.0%)
+  User 31: 50 points (1.4%)
+  User 32: 116 points (3.2%)
+  User 33: 115 points (3.2%)
+  User 34: 111 points (3.1%)
+  User 35: 81 points (2.2%)
+  User 36: 28 points (0.8%)
+  User 37: 49 points (1.4%)
+  User 39: 65 points (1.8%)
+  User 41: 56 points (1.6%)
+  User 42: 68 points (1.9%)
+  User 44: 17 points (0.5%)
+  User 46: 55 points (1.5%)
+  User 47: 42 points (1.2%)
+  User 50: 48 points (1.3%)
+  User 54: 1 points (0.0%)
+  User 55: 41 points (1.1%)
+
+======================================================================
+KEY INSIGHTS
+======================================================================
+
+Highest stress cluster: Cluster 0
+  Average stress level: 33.38
+Highest anxiety cluster: Cluster 0
+  Average anxiety level: 34.20
+
+======================================================================
+END OF REPORT
+======================================================================
