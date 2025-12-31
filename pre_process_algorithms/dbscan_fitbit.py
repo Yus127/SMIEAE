@@ -287,3 +287,114 @@ if __name__ == "__main__":
     print(f"Failed: {failed}/{len(csv_files)}")
     print(f"\nResults saved to: {output_dir}")
     print("="*60)
+    ## WHAT IF I CHOOSE THE VARIABLES AND DO THE DBSCAN IN THE STRESS LEVELS
+    """
+    Para DBSCAN (outliers) necesitas **pocas variables (4–10 máximo)**, **bien escaladas**, y en tu caso casi siempre **por usuario** (o normalizadas por usuario). Si metes las ~100 columnas, DBSCAN va a fallar o va a detectar “missingness” en vez de eventos reales.
+
+Abajo te dejo **tres conjuntos de variables** (elige según el tipo de outlier que quieres reportar). En la práctica, yo usaría **A + C** y luego cruzaría resultados.
+
+---
+
+## A) DBSCAN para outliers de **estrés/ansiedad** (eventos psicológicos)
+
+Úsalo cuando quieras detectar “días raros” en los reportes (0–100).
+
+**Variables (recomendado):**
+
+1. `stress`
+2. `anxiety`
+3. `stress_delta = stress(t) - stress(t-1)`
+4. `anxiety_delta = anxiety(t) - anxiety(t-1)`
+
+**Notas:**
+
+* Corre DBSCAN **por usuario**.
+* Antes de DBSCAN: estandariza por usuario (z-score) para que “alto estrés” de un alumno no se compare con “alto estrés” de otro.
+* Este set casi no sufre por faltantes porque tus respuestas son relativamente completas.
+
+---
+
+## B) DBSCAN biométrico “denso” (cubre la mayoría de días)
+
+Sirve para detectar días físicamente raros incluso cuando no hay sueño/HRV.
+
+**Variables (elige 6–8):**
+
+* `daily_total_steps`
+* `activity_level_sedentary_count`
+* `activity_level_lightly_active_count`
+* `activity_level_moderately_active_count`
+* `activity_level_very_active_count`
+* `heart_rate_activity_beats per minute_mean`
+* `heart_rate_activity_beats per minute_std`
+  (opcional) `heart_rate_activity_beats per minute_max`
+
+**Por qué este set:** suele tener mucha cobertura (casi diario) y DBSCAN funciona mejor.
+
+**Importante:** crea un proxy de uso del wearable:
+
+* `wear_time_proxy = sedentary + lightly + moderately + very_active`
+  y si `wear_time_proxy` es muy bajo, **no llames outlier a ese día** (es día de baja calidad).
+
+---
+
+## C) DBSCAN biométrico “recovery nocturno” (mejor señal, menos días)
+
+Este es el más útil para relacionar fisiología con estrés/ansiedad, pero solo en días con datos de sueño/HRV/resp confiables.
+
+**Variables (elige 6–9):**
+**Sueño (calidad/cantidad):**
+
+* `sleep_global_minutesAsleep`
+* `sleep_global_efficiency`
+* `sleep_global_minutesAwake`  *(o `micro_awakening_per_hour` si está disponible suficiente)*
+* `sleep_global_minutesToFallAsleep`
+
+**HRV / autonómico:**
+
+* `daily_hrv_summary_rmssd`
+* `daily_hrv_summary_nremhr`  *(o ambos si puedes)*
+
+**Respiración:**
+
+* `daily_respiratory_rate_daily_respiratory_rate`
+  (o alternativamente `respiratory_rate_summary_full_sleep_breathing_rate_mean`)
+
+**Actividad (control):**
+
+* `daily_total_steps`  **o** `wear_time_proxy` (uno de los dos)
+
+**Filtro recomendado (antes de correr DBSCAN):**
+
+* usar solo días con `has_sleep=1` y `has_hrv=1` y `has_resp=1` (según el set que uses)
+* y `wear_time_proxy` arriba de un umbral razonable
+
+---
+
+## SpO₂: úsalo con cautela
+
+En muchos datasets Fitbit, `minute_spo2_value_min` puede ser un “floor” constante o artefacto.
+Si no has verificado que **varía** y tiene rangos realistas, yo haría:
+
+* **No incluir SpO₂** en DBSCAN biométrico, o
+* usar solo `daily_spo2_average_value` (si pasa control de calidad), nunca el `min` si es sospechoso.
+
+---
+
+## Regla de oro para DBSCAN con tus datos
+
+* **No mezcles usuarios sin normalizar.** Mejor: DBSCAN **por usuario**.
+* **Escala siempre** (StandardScaler o RobustScaler) antes de DBSCAN.
+* **Pocas variables** (4–10). Si quieres más señal, usa PCA a 3–5 componentes y corre DBSCAN en esos componentes.
+
+---
+
+## Recomendación final (lo más defendible en tu reporte)
+
+1. Detecta outliers en el **espacio mental** con Set A.
+2. Detecta outliers en **recovery** con Set C (solo días de alta calidad).
+3. Reporta “outliers de alta confianza” como la intersección:
+   **outlier_high_conf = outlier_A AND outlier_C**.
+
+Si me dices si vas a correr DBSCAN **por usuario** (recomendado) o global con z-score por usuario, te doy el esquema exacto de preprocesamiento (incluyendo cómo alinear `dateOfSleep` con el estrés reportado al final del día) y los parámetros iniciales (`min_samples`, estrategia para `eps`).
+"""

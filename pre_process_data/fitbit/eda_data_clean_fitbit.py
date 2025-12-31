@@ -147,7 +147,7 @@ def analyze_daily_summary_df(df, user_name):
 def aggregate_daily_summaries():
     """Create master summary of all daily summary files"""
     
-    base_dir = "/Users/YusMolina/Downloads/smieae/data/data_clean/"
+    base_dir = "/Users/YusMolina/Downloads/smieae/data/data_clean/fitbit"
     base_dir = Path(base_dir)
     
     if not base_dir.exists():
