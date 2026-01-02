@@ -5,6 +5,8 @@ import seaborn as sns
 from pathlib import Path
 import glob
 
+"""AHORA DEBO VER SI HAY CORRELACIÓN ENTRE LAS VAIABLES Y LOS OBJETIVOS """
+
 # Configuration
 csv_folder = "/Users/YusMolina/Downloads/smieae/data/data_clean/fitbit"  # Change this to your folder path
 output_folder = "/Users/YusMolina/Downloads/smieae/data/data_clean/fitbit/correlationResults"  # Folder to save results
@@ -130,12 +132,12 @@ plt.savefig(f"{output_folder}/correlation_heatmap.png", dpi=300, bbox_inches='ti
 print(f"Correlation heatmap saved to {output_folder}/correlation_heatmap.png")
 plt.close()
 
-# Find strong correlations (absolute value > 0.5, excluding diagonal)
+# Find strong correlations (absolute value > 0.7, excluding diagonal)
 strong_correlations = []
 for i in range(len(correlation_matrix.columns)):
     for j in range(i+1, len(correlation_matrix.columns)):
         corr_value = correlation_matrix.iloc[i, j]
-        if abs(corr_value) > 0.5:
+        if abs(corr_value) > 0.7:
             strong_correlations.append({
                 'Variable 1': correlation_matrix.columns[i],
                 'Variable 2': correlation_matrix.columns[j],
@@ -151,11 +153,11 @@ if not strong_corr_df.empty:
     strong_corr_df.to_csv(f"{output_folder}/strong_correlations.csv", index=False)
     
     print("\n" + "="*50)
-    print("STRONG CORRELATIONS (|r| > 0.5)")
+    print("STRONG CORRELATIONS (|r| > 0.7)")
     print("="*50)
     print(strong_corr_df.to_string(index=False))
 else:
-    print("\nNo strong correlations (|r| > 0.5) found")
+    print("\nNo strong correlations (|r| > 0.7) found")
 
 # Create pairplot for top correlated variables (if any strong correlations exist)
 if not strong_corr_df.empty and len(strong_corr_df) > 0:
@@ -180,14 +182,6 @@ if not strong_corr_df.empty and len(strong_corr_df) > 0:
         print(f"Pairplot saved to {output_folder}/pairplot_top_correlations.png")
         plt.close()
 
-# Statistical summary by user
-print("\n" + "="*50)
-print("SUMMARY STATISTICS BY USER")
-print("="*50)
-user_summary = df_encoded.groupby('user_id')[numeric_cols].mean()
-user_summary.to_csv(f"{output_folder}/user_summary_stats.csv")
-print(f"User summary statistics saved to {output_folder}/user_summary_stats.csv")
-print(user_summary.head())
 
 print("\n" + "="*50)
 print("ANALYSIS COMPLETE!")
@@ -196,6 +190,6 @@ print(f"All results saved to '{output_folder}' folder")
 print("\nGenerated files:")
 print("1. correlation_matrix.csv - Full correlation matrix")
 print("2. correlation_heatmap.png - Visual heatmap")
-print("3. strong_correlations.csv - Pairs with |r| > 0.5")
+print("3. strong_correlations.csv - Pairs with |r| > 0.7")
 print("4. pairplot_top_correlations.png - Scatter plots of top variables")
 print("5. user_summary_stats.csv - Average values per user")
