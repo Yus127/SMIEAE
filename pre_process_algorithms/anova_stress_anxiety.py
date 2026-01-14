@@ -1,566 +1,436 @@
 import pandas as pd
 import numpy as np
-from scipy import stats
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
+from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import (mean_squared_error, mean_absolute_error, r2_score,
+                             classification_report, confusion_matrix, accuracy_score)
+import warnings
+warnings.filterwarnings('ignore')
 
-# Load the dataset
-df = pd.read_csv('/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/combined_daily_data.csv')
+# Try to import XGBoost, fall back to LightGBM or GradientBoosting if not available
+try:
+    import xgboost as xgb
+    MODEL_TYPE = 'XGBoost'
+    print("✓ Using XGBoost")
+except Exception as e:
+    print(f"⚠️  XGBoost not available: {str(e)[:100]}")
+    try:
+        import lightgbm as lgb
+        MODEL_TYPE = 'LightGBM'
+        print("✓ Using LightGBM as alternative")
+    except:
+        from sklearn.ensemble import GradientBoostingRegressor
+        MODEL_TYPE = 'GradientBoosting'
+        print("✓ Using scikit-learn GradientBoosting as alternative")
 
 print("="*80)
-print("CREATING LOG-TRANSFORMED DATASET FOR ML MODELING")
+print(f"{MODEL_TYPE} PREDICTION: STRESS & ANXIETY LEVELS")
 print("="*80)
 
 # ============================================================================
-# STEP 1: IDENTIFY SEVERELY SKEWED VARIABLES TO TRANSFORM
+# STEP 1: LOAD DATA
 # ============================================================================
 
-# Original list of severely skewed variables (from diagnostics)
-severely_skewed_original = [
-    'sleep_global_minutesAwake',
-    'sleep_global_efficiency',
-    'sleep_stage_transitions',
-    'hrv_details_rmssd_std',
-    'hrv_details_rmssd_max'
-]
+print("\n[1/8] Loading ML-ready dataset...")
+df = pd.read_csv('/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/ml_ready_dataset_transformed.csv')
 
-# Your new predictor variables
-original_predictors = [
-    # Activity variables
-    'daily_total_steps',
-    'activity_level_sedentary_count',
-    'activity_level_lightly_active_count',
-    'activity_level_moderately_active_count',
-    'activity_level_very_active_count',
-    
-    # Heart rate during activity
-    'heart_rate_activity_beats per minute_mean',
-    'heart_rate_activity_beats per minute_min',
-    'heart_rate_activity_beats per minute_max',
-    
-    # Sleep summary
-    'sleep_global_duration',
-    'sleep_global_minutesAwake',  # TRANSFORMED
-    'sleep_global_efficiency',  # TRANSFORMED
-    'sleep_stage_transitions',  # TRANSFORMED
-    'deep_sleep_minutes',
-    'last_sleep_stage',
-    'respiratory_rate_summary_rem_sleep_signal_to_noise',
-    'rem_avg_segment_duration_minutes',
-    
-    # Additional physiological variables
-    'daily_hrv_summary_rmssd',
-    'daily_respiratory_rate_daily_respiratory_rate',
-    'minute_spo2_value_mean',
-    'minute_spo2_value_min',
-    
-    # HRV
-    'hrv_details_rmssd_mean',
-    'hrv_details_rmssd_std',  # TRANSFORMED
-    'hrv_details_rmssd_min',
-    'hrv_details_rmssd_max',  # TRANSFORMED
-    
-    # Target variables
-    'stress_level',
-    'anxiety_level'
-]
-
-# Variables that need transformation (intersection of severely skewed and your list)
-variables_to_transform = [
-    'sleep_global_minutesAwake',
-    'sleep_global_efficiency',
-    'sleep_stage_transitions',
-    'hrv_details_rmssd_std',
-    'hrv_details_rmssd_max'
-]
-
-print("\nVariables that will be log-transformed:")
-for var in variables_to_transform:
-    if var in df.columns:
-        print(f"  ✓ {var}")
-    else:
-        print(f"  ✗ {var} (NOT FOUND in dataset)")
+print(f"✓ Dataset loaded: {df.shape}")
+print(f"  Rows: {df.shape[0]}")
+print(f"  Columns: {df.shape[1]}")
 
 # ============================================================================
-# STEP 2: CHECK SKEWNESS FOR NEW VARIABLES
+# STEP 2: PREPARE FEATURES AND TARGETS
+# ============================================================================
+
+print("\n[2/8] Preparing features and targets...")
+
+# Separate features and targets
+X = df.drop(['stress_level', 'anxiety_level'], axis=1)
+y_stress = df['stress_level']
+y_anxiety = df['anxiety_level']
+
+print(f"✓ Features shape: {X.shape}")
+print(f"✓ Stress target shape: {y_stress.shape}")
+print(f"✓ Anxiety target shape: {y_anxiety.shape}")
+
+# Check for missing data
+missing_cols = X.columns[X.isna().any()].tolist()
+if missing_cols:
+    print(f"\n⚠️  Missing data found in {len(missing_cols)} columns")
+    for col in missing_cols[:5]:
+        pct = (X[col].isna().sum() / len(X)) * 100
+        print(f"  • {col}: {pct:.1f}% missing")
+    if len(missing_cols) > 5:
+        print(f"  ... and {len(missing_cols) - 5} more")
+
+# ============================================================================
+# STEP 3: HANDLE MISSING DATA
+# ============================================================================
+
+print("\n[3/8] Handling missing data...")
+
+# Use median imputation for numerical features
+imputer = SimpleImputer(strategy='median')
+X_imputed = pd.DataFrame(
+    imputer.fit_transform(X),
+    columns=X.columns,
+    index=X.index
+)
+
+print(f"✓ Missing data imputed using median strategy")
+print(f"  Remaining missing values: {X_imputed.isna().sum().sum()}")
+
+# ============================================================================
+# STEP 4: SPLIT DATA
+# ============================================================================
+
+print("\n[4/8] Splitting data into train/test sets...")
+
+# Split for stress prediction
+X_train_stress, X_test_stress, y_train_stress, y_test_stress = train_test_split(
+    X_imputed, y_stress, test_size=0.2, random_state=42, stratify=None
+)
+
+# Split for anxiety prediction
+X_train_anxiety, X_test_anxiety, y_train_anxiety, y_test_anxiety = train_test_split(
+    X_imputed, y_anxiety, test_size=0.2, random_state=42, stratify=None
+)
+
+print("✓ Stress prediction sets:")
+print(f"  Training: {X_train_stress.shape[0]} samples")
+print(f"  Testing: {X_test_stress.shape[0]} samples")
+
+print("✓ Anxiety prediction sets:")
+print(f"  Training: {X_train_anxiety.shape[0]} samples")
+print(f"  Testing: {X_test_anxiety.shape[0]} samples")
+
+# ============================================================================
+# STEP 5: TRAIN XGBOOST MODELS
+# ============================================================================
+
+print("\n[5/8] Training models...")
+
+# Create models based on what's available
+if MODEL_TYPE == 'XGBoost':
+    # XGBoost parameters
+    params = {
+        'objective': 'reg:squarederror',
+        'max_depth': 6,
+        'learning_rate': 0.1,
+        'n_estimators': 100,
+        'subsample': 0.8,
+        'colsample_bytree': 0.8,
+        'random_state': 42,
+        'n_jobs': -1
+    }
+    model_stress = xgb.XGBRegressor(**params)
+    model_anxiety = xgb.XGBRegressor(**params)
+    
+elif MODEL_TYPE == 'LightGBM':
+    # LightGBM parameters
+    params = {
+        'objective': 'regression',
+        'max_depth': 6,
+        'learning_rate': 0.1,
+        'n_estimators': 100,
+        'subsample': 0.8,
+        'colsample_bytree': 0.8,
+        'random_state': 42,
+        'n_jobs': -1,
+        'verbose': -1
+    }
+    model_stress = lgb.LGBMRegressor(**params)
+    model_anxiety = lgb.LGBMRegressor(**params)
+    
+else:  # GradientBoosting
+    # Scikit-learn GradientBoosting parameters
+    params = {
+        'max_depth': 6,
+        'learning_rate': 0.1,
+        'n_estimators': 100,
+        'subsample': 0.8,
+        'random_state': 42
+    }
+    model_stress = GradientBoostingRegressor(**params)
+    model_anxiety = GradientBoostingRegressor(**params)
+
+# Train stress model
+print("\n  Training STRESS model...")
+model_stress.fit(X_train_stress, y_train_stress)
+print("  ✓ Stress model trained")
+
+# Train anxiety model
+print("  Training ANXIETY model...")
+model_anxiety.fit(X_train_anxiety, y_train_anxiety)
+print("  ✓ Anxiety model trained")
+
+# ============================================================================
+# STEP 6: MAKE PREDICTIONS
+# ============================================================================
+
+print("\n[6/8] Making predictions...")
+
+# Stress predictions
+y_pred_stress_train = model_stress.predict(X_train_stress)
+y_pred_stress_test = model_stress.predict(X_test_stress)
+
+# Anxiety predictions
+y_pred_anxiety_train = model_anxiety.predict(X_train_anxiety)
+y_pred_anxiety_test = model_anxiety.predict(X_test_anxiety)
+
+print("✓ Predictions completed")
+
+# ============================================================================
+# STEP 7: EVALUATE MODELS
+# ============================================================================
+
+print("\n[7/8] Evaluating model performance...")
+
+def evaluate_regression(y_true, y_pred, dataset_name):
+    """Calculate regression metrics"""
+    mse = mean_squared_error(y_true, y_pred)
+    rmse = np.sqrt(mse)
+    mae = mean_absolute_error(y_true, y_pred)
+    r2 = r2_score(y_true, y_pred)
+    
+    return {
+        'Dataset': dataset_name,
+        'MSE': mse,
+        'RMSE': rmse,
+        'MAE': mae,
+        'R²': r2
+    }
+
+# Evaluate stress model
+stress_train_metrics = evaluate_regression(y_train_stress, y_pred_stress_train, 'Train')
+stress_test_metrics = evaluate_regression(y_test_stress, y_pred_stress_test, 'Test')
+
+# Evaluate anxiety model
+anxiety_train_metrics = evaluate_regression(y_train_anxiety, y_pred_anxiety_train, 'Train')
+anxiety_test_metrics = evaluate_regression(y_test_anxiety, y_pred_anxiety_test, 'Test')
+
+# Display results
+print("\n" + "="*80)
+print("STRESS PREDICTION RESULTS")
+print("="*80)
+stress_results = pd.DataFrame([stress_train_metrics, stress_test_metrics])
+print(stress_results.to_string(index=False))
+
+print("\n" + "="*80)
+print("ANXIETY PREDICTION RESULTS")
+print("="*80)
+anxiety_results = pd.DataFrame([anxiety_train_metrics, anxiety_test_metrics])
+print(anxiety_results.to_string(index=False))
+
+# Check for overfitting
+print("\n" + "="*80)
+print("OVERFITTING CHECK")
+print("="*80)
+stress_overfit = stress_train_metrics['R²'] - stress_test_metrics['R²']
+anxiety_overfit = anxiety_train_metrics['R²'] - anxiety_test_metrics['R²']
+
+print(f"Stress model:")
+print(f"  Train R²: {stress_train_metrics['R²']:.4f}")
+print(f"  Test R²: {stress_test_metrics['R²']:.4f}")
+print(f"  Difference: {stress_overfit:.4f} {'⚠️  (overfitting)' if stress_overfit > 0.1 else '✓ (good)'}")
+
+print(f"\nAnxiety model:")
+print(f"  Train R²: {anxiety_train_metrics['R²']:.4f}")
+print(f"  Test R²: {anxiety_test_metrics['R²']:.4f}")
+print(f"  Difference: {anxiety_overfit:.4f} {'⚠️  (overfitting)' if anxiety_overfit > 0.1 else '✓ (good)'}")
+
+# ============================================================================
+# STEP 8: FEATURE IMPORTANCE
+# ============================================================================
+
+print("\n[8/8] Analyzing feature importance...")
+
+# Get feature importance based on model type
+if MODEL_TYPE == 'GradientBoosting':
+    stress_importances = model_stress.feature_importances_
+    anxiety_importances = model_anxiety.feature_importances_
+else:
+    stress_importances = model_stress.feature_importances_
+    anxiety_importances = model_anxiety.feature_importances_
+
+# Get feature importance for stress model
+stress_importance = pd.DataFrame({
+    'Feature': X.columns,
+    'Importance': stress_importances
+}).sort_values('Importance', ascending=False)
+
+# Get feature importance for anxiety model
+anxiety_importance = pd.DataFrame({
+    'Feature': X.columns,
+    'Importance': anxiety_importances
+}).sort_values('Importance', ascending=False)
+
+print("\n" + "="*80)
+print("TOP 10 MOST IMPORTANT FEATURES FOR STRESS PREDICTION")
+print("="*80)
+print(stress_importance.head(10).to_string(index=False))
+
+print("\n" + "="*80)
+print("TOP 10 MOST IMPORTANT FEATURES FOR ANXIETY PREDICTION")
+print("="*80)
+print(anxiety_importance.head(10).to_string(index=False))
+
+# ============================================================================
+# STEP 9: VISUALIZATIONS
 # ============================================================================
 
 print("\n" + "="*80)
-print("CHECKING SKEWNESS FOR ALL PREDICTORS")
+print("GENERATING VISUALIZATIONS")
 print("="*80)
 
-skewness_report = []
-for var in original_predictors:
-    if var not in df.columns:
-        print(f"Warning: {var} not found in dataset")
-        continue
-    
-    data = df[var].dropna()
-    if len(data) < 3:
-        continue
-    
-    skewness = stats.skew(data)
-    severely_skewed = abs(skewness) > 2
-    
-    skewness_report.append({
-        'Variable': var,
-        'Skewness': skewness,
-        'Abs_Skewness': abs(skewness),
-        'Severely_Skewed': severely_skewed,
-        'Needs_Transform': var in variables_to_transform or severely_skewed
-    })
+# Create figure with subplots
+fig, axes = plt.subplots(2, 3, figsize=(18, 12))
 
-skew_df = pd.DataFrame(skewness_report).sort_values('Abs_Skewness', ascending=False)
-print("\nSkewness Report (sorted by severity):")
-print(skew_df.to_string(index=False))
+# 1. Stress - Actual vs Predicted (Test)
+ax1 = axes[0, 0]
+ax1.scatter(y_test_stress, y_pred_stress_test, alpha=0.5, s=20)
+ax1.plot([y_test_stress.min(), y_test_stress.max()], 
+         [y_test_stress.min(), y_test_stress.max()], 
+         'r--', lw=2)
+ax1.set_xlabel('Actual Stress Level')
+ax1.set_ylabel('Predicted Stress Level')
+ax1.set_title(f'Stress: Actual vs Predicted (Test)\nR² = {stress_test_metrics["R²"]:.3f}')
+ax1.grid(True, alpha=0.3)
 
-# Identify any NEW severely skewed variables not in our transform list
-new_severely_skewed = skew_df[
-    (skew_df['Severely_Skewed'] == True) & 
-    (~skew_df['Variable'].isin(variables_to_transform))
-]['Variable'].tolist()
+# 2. Stress - Residuals
+ax2 = axes[0, 1]
+residuals_stress = y_test_stress - y_pred_stress_test
+ax2.scatter(y_pred_stress_test, residuals_stress, alpha=0.5, s=20)
+ax2.axhline(y=0, color='r', linestyle='--', lw=2)
+ax2.set_xlabel('Predicted Stress Level')
+ax2.set_ylabel('Residuals')
+ax2.set_title('Stress: Residual Plot')
+ax2.grid(True, alpha=0.3)
 
-if new_severely_skewed:
-    print("\n⚠️  WARNING: Found additional severely skewed variables:")
-    for var in new_severely_skewed:
-        skew_val = skew_df[skew_df['Variable'] == var]['Skewness'].values[0]
-        print(f"  • {var} (skewness = {skew_val:.2f})")
-        variables_to_transform.append(var)
-    print("\n✓ Adding these to transformation list")
+# 3. Stress - Feature Importance
+ax3 = axes[0, 2]
+top_10_stress = stress_importance.head(10)
+ax3.barh(range(len(top_10_stress)), top_10_stress['Importance'])
+ax3.set_yticks(range(len(top_10_stress)))
+ax3.set_yticklabels(top_10_stress['Feature'], fontsize=8)
+ax3.set_xlabel('Importance')
+ax3.set_title('Top 10 Features for Stress')
+ax3.invert_yaxis()
+
+# 4. Anxiety - Actual vs Predicted (Test)
+ax4 = axes[1, 0]
+ax4.scatter(y_test_anxiety, y_pred_anxiety_test, alpha=0.5, s=20, color='orange')
+ax4.plot([y_test_anxiety.min(), y_test_anxiety.max()], 
+         [y_test_anxiety.min(), y_test_anxiety.max()], 
+         'r--', lw=2)
+ax4.set_xlabel('Actual Anxiety Level')
+ax4.set_ylabel('Predicted Anxiety Level')
+ax4.set_title(f'Anxiety: Actual vs Predicted (Test)\nR² = {anxiety_test_metrics["R²"]:.3f}')
+ax4.grid(True, alpha=0.3)
+
+# 5. Anxiety - Residuals
+ax5 = axes[1, 1]
+residuals_anxiety = y_test_anxiety - y_pred_anxiety_test
+ax5.scatter(y_pred_anxiety_test, residuals_anxiety, alpha=0.5, s=20, color='orange')
+ax5.axhline(y=0, color='r', linestyle='--', lw=2)
+ax5.set_xlabel('Predicted Anxiety Level')
+ax5.set_ylabel('Residuals')
+ax5.set_title('Anxiety: Residual Plot')
+ax5.grid(True, alpha=0.3)
+
+# 6. Anxiety - Feature Importance
+ax6 = axes[1, 2]
+top_10_anxiety = anxiety_importance.head(10)
+ax6.barh(range(len(top_10_anxiety)), top_10_anxiety['Importance'], color='orange')
+ax6.set_yticks(range(len(top_10_anxiety)))
+ax6.set_yticklabels(top_10_anxiety['Feature'], fontsize=8)
+ax6.set_xlabel('Importance')
+ax6.set_title('Top 10 Features for Anxiety')
+ax6.invert_yaxis()
+
+plt.tight_layout()
+output_plot = f'/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/anova/{MODEL_TYPE.lower()}_results.png'
+plt.savefig(output_plot, dpi=300, bbox_inches='tight')
+plt.show()
+
+print(f"✓ Saved visualization: {output_plot}")
 
 # ============================================================================
-# STEP 3: APPLY LOG TRANSFORMATIONS
+# STEP 10: SAVE RESULTS
 # ============================================================================
 
 print("\n" + "="*80)
-print("APPLYING LOG TRANSFORMATIONS")
+print("SAVING RESULTS")
 print("="*80)
 
-df_transformed = df.copy()
-transformation_log = []
+base_path = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/anova/'
 
-for var in variables_to_transform:
-    if var not in df.columns:
-        print(f"  ✗ Skipping {var} (not found)")
-        continue
-    
-    # Create new column name
-    new_var_name = f"{var}_log"
-    
-    # Check if variable has negative values
-    min_val = df[var].min()
-    
-    if var == 'sleep_global_efficiency':
-        # Efficiency is left-skewed (negative skew), use reversed transformation
-        max_val = df[var].max()
-        df_transformed[new_var_name] = np.log1p(max_val - df[var] + 1)
-        transform_type = "Reversed log (for negative skew)"
-    elif min_val < 0:
-        # Has negative values, shift before log
-        shift = abs(min_val) + 1
-        df_transformed[new_var_name] = np.log1p(df[var] + shift)
-        transform_type = f"Log with shift (+{shift:.2f})"
-    else:
-        # Standard log transformation
-        df_transformed[new_var_name] = np.log1p(df[var])
-        transform_type = "Standard log(x+1)"
-    
-    # Calculate before/after skewness
-    original_skew = stats.skew(df[var].dropna())
-    transformed_skew = stats.skew(df_transformed[new_var_name].dropna())
-    
-    transformation_log.append({
-        'Original_Variable': var,
-        'Transformed_Variable': new_var_name,
-        'Transform_Type': transform_type,
-        'Original_Skewness': original_skew,
-        'Transformed_Skewness': transformed_skew,
-        'Improvement': abs(original_skew) - abs(transformed_skew)
-    })
-    
-    print(f"  ✓ {var} → {new_var_name}")
-    print(f"     Type: {transform_type}")
-    print(f"     Skewness: {original_skew:.2f} → {transformed_skew:.2f} (Δ = {abs(original_skew) - abs(transformed_skew):.2f})")
+# Save metrics
+metrics_df = pd.DataFrame({
+    'Model': ['Stress', 'Stress', 'Anxiety', 'Anxiety'],
+    'Dataset': ['Train', 'Test', 'Train', 'Test'],
+    'MSE': [stress_train_metrics['MSE'], stress_test_metrics['MSE'],
+            anxiety_train_metrics['MSE'], anxiety_test_metrics['MSE']],
+    'RMSE': [stress_train_metrics['RMSE'], stress_test_metrics['RMSE'],
+             anxiety_train_metrics['RMSE'], anxiety_test_metrics['RMSE']],
+    'MAE': [stress_train_metrics['MAE'], stress_test_metrics['MAE'],
+            anxiety_train_metrics['MAE'], anxiety_test_metrics['MAE']],
+    'R²': [stress_train_metrics['R²'], stress_test_metrics['R²'],
+           anxiety_train_metrics['R²'], anxiety_test_metrics['R²']]
+})
+metrics_df.to_csv(f'{base_path}xgboost_metrics.csv', index=False)
+print(f"✓ Saved: xgboost_metrics.csv")
+
+# Save feature importance
+stress_importance.to_csv(f'{base_path}xgboost_feature_importance_stress.csv', index=False)
+anxiety_importance.to_csv(f'{base_path}xgboost_feature_importance_anxiety.csv', index=False)
+print(f"✓ Saved: xgboost_feature_importance_stress.csv")
+print(f"✓ Saved: xgboost_feature_importance_anxiety.csv")
+
+# Save predictions
+predictions_stress = pd.DataFrame({
+    'Actual_Stress': y_test_stress.values,
+    'Predicted_Stress': y_pred_stress_test
+})
+predictions_stress.to_csv(f'{base_path}xgboost_predictions_stress.csv', index=False)
+
+predictions_anxiety = pd.DataFrame({
+    'Actual_Anxiety': y_test_anxiety.values,
+    'Predicted_Anxiety': y_pred_anxiety_test
+})
+predictions_anxiety.to_csv(f'{base_path}xgboost_predictions_anxiety.csv', index=False)
+print(f"✓ Saved: xgboost_predictions_stress.csv")
+print(f"✓ Saved: xgboost_predictions_anxiety.csv")
 
 # ============================================================================
-# STEP 4: CREATE FINAL ML-READY DATASET
+# STEP 11: SUMMARY
 # ============================================================================
 
 print("\n" + "="*80)
-print("CREATING ML-READY DATASET")
+print(f"{MODEL_TYPE} MODELING COMPLETE!")
 print("="*80)
 
-# Build list of columns for ML (replace transformed variables)
-ml_columns = []
-for var in original_predictors:
-    if var in variables_to_transform:
-        # Use transformed version
-        ml_columns.append(f"{var}_log")
-    else:
-        # Use original version
-        ml_columns.append(var)
+print("\n📊 KEY FINDINGS:")
+print(f"\nStress Prediction:")
+print(f"  • Test R² = {stress_test_metrics['R²']:.3f} ({stress_test_metrics['R²']*100:.1f}% variance explained)")
+print(f"  • Test RMSE = {stress_test_metrics['RMSE']:.2f}")
+print(f"  • Test MAE = {stress_test_metrics['MAE']:.2f}")
+print(f"  • Top predictor: {stress_importance.iloc[0]['Feature']}")
 
-# Filter to only include columns that exist
-ml_columns_existing = [col for col in ml_columns if col in df_transformed.columns]
+print(f"\nAnxiety Prediction:")
+print(f"  • Test R² = {anxiety_test_metrics['R²']:.3f} ({anxiety_test_metrics['R²']*100:.1f}% variance explained)")
+print(f"  • Test RMSE = {anxiety_test_metrics['RMSE']:.2f}")
+print(f"  • Test MAE = {anxiety_test_metrics['MAE']:.2f}")
+print(f"  • Top predictor: {anxiety_importance.iloc[0]['Feature']}")
 
-print(f"\nTotal predictors: {len(original_predictors)}")
-print(f"Variables transformed: {len(variables_to_transform)}")
-print(f"Final ML columns: {len(ml_columns_existing)}")
-
-# Create ML dataset
-df_ml = df_transformed[ml_columns_existing].copy()
-
-print("\nML-Ready Dataset Columns:")
-for i, col in enumerate(ml_columns_existing, 1):
-    marker = " [LOG-TRANSFORMED]" if "_log" in col else ""
-    print(f"{i:2d}. {col}{marker}")
-
-# ============================================================================
-# STEP 5: DATA QUALITY REPORT
-# ============================================================================
+print("\n💡 NEXT STEPS:")
+print("  1. Fine-tune hyperparameters with GridSearchCV")
+print("  2. Try ensemble methods (combine multiple models)")
+print("  3. Perform cross-validation for more robust estimates")
+print("  4. Consider feature engineering based on importance")
+print("  5. Try classification approach (Low/Medium/High categories)")
 
 print("\n" + "="*80)
-print("DATA QUALITY REPORT")
-print("="*80)
-
-quality_report = []
-for col in ml_columns_existing:
-    n_total = len(df_ml)
-    n_missing = df_ml[col].isna().sum()
-    n_valid = n_total - n_missing
-    pct_missing = (n_missing / n_total) * 100
-    
-    quality_report.append({
-        'Variable': col,
-        'Total_Rows': n_total,
-        'Valid': n_valid,
-        'Missing': n_missing,
-        'Pct_Missing': pct_missing
-    })
-
-quality_df = pd.DataFrame(quality_report).sort_values('Pct_Missing', ascending=False)
-print("\nMissing Data Summary (sorted by % missing):")
-print(quality_df.head(10).to_string(index=False))
-
-high_missing = quality_df[quality_df['Pct_Missing'] > 10]
-if len(high_missing) > 0:
-    print(f"\n⚠️  WARNING: {len(high_missing)} variables have >10% missing data:")
-    print(high_missing[['Variable', 'Pct_Missing']].to_string(index=False))
-
-# ============================================================================
-# STEP 6: SAVE DATASETS
-# ============================================================================
-
-print("\n" + "="*80)
-print("SAVING DATASETS")
-print("="*80)
-
-base_path = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/'
-
-# Save full transformed dataset (all original columns + log columns)
-output_full = f'{base_path}combined_daily_data_with_log_transforms.csv'
-df_transformed.to_csv(output_full, index=False)
-print(f"✓ Full dataset with log transforms: {output_full}")
-print(f"   Shape: {df_transformed.shape}")
-
-# Save ML-ready dataset (only selected predictors with transformations applied)
-output_ml = f'{base_path}ml_ready_dataset_transformed.csv'
-df_ml.to_csv(output_ml, index=False)
-print(f"✓ ML-ready dataset: {output_ml}")
-print(f"   Shape: {df_ml.shape}")
-
-# Save transformation log
-output_log = f'{base_path}anova/transformation_log.csv'
-pd.DataFrame(transformation_log).to_csv(output_log, index=False)
-print(f"✓ Transformation log: {output_log}")
-
-# Save skewness report
-output_skew = f'{base_path}anova/skewness_report.csv'
-skew_df.to_csv(output_skew, index=False)
-print(f"✓ Skewness report: {output_skew}")
-
-# Save data quality report
-output_quality = f'{base_path}anova/data_quality_report.csv'
-quality_df.to_csv(output_quality, index=False)
-print(f"✓ Data quality report: {output_quality}")
-
-# ============================================================================
-# STEP 7: SUMMARY STATISTICS
-# ============================================================================
-
-print("\n" + "="*80)
-print("TRANSFORMATION SUMMARY")
-print("="*80)
-
-trans_df = pd.DataFrame(transformation_log)
-if len(trans_df) > 0:
-    print(f"\nTotal transformations applied: {len(trans_df)}")
-    print(f"Average skewness improvement: {trans_df['Improvement'].mean():.2f}")
-    print(f"Best improvement: {trans_df['Improvement'].max():.2f} ({trans_df.loc[trans_df['Improvement'].idxmax(), 'Original_Variable']})")
-    
-    print("\nTransformation Details:")
-    print(trans_df[['Original_Variable', 'Original_Skewness', 'Transformed_Skewness', 'Improvement']].to_string(index=False))
-
-# ============================================================================
-# STEP 8: CREATE STRESS AND ANXIETY GROUPS FOR ANOVA
-# ============================================================================
-
-print("\n" + "="*80)
-print("RUNNING ANOVA ANALYSIS WITH TRANSFORMED VARIABLES")
-print("="*80)
-
-def create_groups(data, column, new_column_name):
-    """Create Low/Medium/High groups based on tertiles (33%, 66%)"""
-    tertiles = data[column].quantile([0.33, 0.67])
-    
-    conditions = [
-        data[column] <= tertiles.iloc[0],
-        (data[column] > tertiles.iloc[0]) & (data[column] <= tertiles.iloc[1]),
-        data[column] > tertiles.iloc[1]
-    ]
-    choices = ['Low', 'Medium', 'High']
-    
-    data[new_column_name] = np.select(conditions, choices, default='Unknown')
-    return data
-
-df_transformed = create_groups(df_transformed, 'stress_level', 'stress_group')
-df_transformed = create_groups(df_transformed, 'anxiety_level', 'anxiety_group')
-
-print("✓ Created stress and anxiety groups")
-
-# ============================================================================
-# STEP 9: ANOVA ANALYSIS FUNCTIONS
-# ============================================================================
-
-from scipy.stats import levene, f_oneway
-from statsmodels.stats.multitest import multipletests
-
-def welch_anova(groups):
-    """Welch's ANOVA for unequal variances"""
-    groups_clean = [g.dropna() for g in groups if len(g.dropna()) > 0]
-    
-    if len(groups_clean) < 2:
-        return np.nan, np.nan
-    
-    k = len(groups_clean)
-    n_i = np.array([len(g) for g in groups_clean])
-    mean_i = np.array([g.mean() for g in groups_clean])
-    var_i = np.array([g.var(ddof=1) for g in groups_clean])
-    w_i = n_i / var_i
-    
-    grand_mean = np.sum(w_i * mean_i) / np.sum(w_i)
-    numerator = np.sum(w_i * (mean_i - grand_mean)**2) / (k - 1)
-    tmp = (1 - w_i/np.sum(w_i))**2 / (n_i - 1)
-    denominator = 1 + (2 * (k - 2) / (k**2 - 1)) * np.sum(tmp)
-    
-    f_stat = numerator / denominator
-    df1 = k - 1
-    df2 = 1 / (3 * np.sum(tmp) / (k**2 - 1))
-    p_value = 1 - stats.f.cdf(f_stat, df1, df2)
-    
-    return f_stat, p_value
-
-def calculate_eta_squared(groups):
-    """Calculate eta-squared effect size"""
-    groups_clean = [g.dropna() for g in groups if len(g.dropna()) > 0]
-    
-    if len(groups_clean) < 2:
-        return np.nan
-    
-    grand_mean = np.concatenate(groups_clean).mean()
-    ss_between = sum(len(g) * (g.mean() - grand_mean)**2 for g in groups_clean)
-    all_data = np.concatenate(groups_clean)
-    ss_total = np.sum((all_data - grand_mean)**2)
-    eta_squared = ss_between / ss_total if ss_total > 0 else np.nan
-    
-    return eta_squared
-
-def run_anova_analysis(data, group_column, predictor_vars, analysis_name):
-    """Run comprehensive ANOVA analysis"""
-    results = []
-    
-    print(f"\nRunning {analysis_name} ANOVA...")
-    
-    for var in predictor_vars:
-        if var not in data.columns:
-            print(f"  Skipping {var} (not found)")
-            continue
-        
-        groups = [data[data[group_column] == level][var].dropna() 
-                  for level in ['Low', 'Medium', 'High']]
-        
-        valid_groups = [g for g in groups if len(g) >= 2]
-        if len(valid_groups) < 2:
-            print(f"  Skipping {var} (insufficient data)")
-            continue
-        
-        group_means = [g.mean() for g in groups]
-        group_stds = [g.std() for g in groups]
-        group_ns = [len(g) for g in groups]
-        
-        levene_stat, levene_p = levene(*groups)
-        homogeneity = levene_p > 0.05
-        
-        if homogeneity:
-            f_stat, p_value = f_oneway(*groups)
-            anova_type = "Standard ANOVA"
-        else:
-            f_stat, p_value = welch_anova(groups)
-            anova_type = "Welch's ANOVA"
-        
-        eta_sq = calculate_eta_squared(groups)
-        
-        results.append({
-            'Variable': var,
-            'ANOVA_Type': anova_type,
-            'F_Statistic': f_stat,
-            'P_Value': p_value,
-            'Levene_P': levene_p,
-            'Homogeneity': homogeneity,
-            'Eta_Squared': eta_sq,
-            'Low_Mean': group_means[0],
-            'Low_SD': group_stds[0],
-            'Low_N': group_ns[0],
-            'Medium_Mean': group_means[1],
-            'Medium_SD': group_stds[1],
-            'Medium_N': group_ns[1],
-            'High_Mean': group_means[2],
-            'High_SD': group_stds[2],
-            'High_N': group_ns[2]
-        })
-    
-    print(f"  ✓ Completed {len(results)} tests")
-    return pd.DataFrame(results)
-
-# ============================================================================
-# STEP 10: RUN ANOVA WITH TRANSFORMED VARIABLES
-# ============================================================================
-
-# Get predictor list (excluding target variables for ANOVA)
-anova_predictors = [col for col in ml_columns_existing if col not in ['stress_level', 'anxiety_level']]
-
-print(f"\nRunning ANOVA on {len(anova_predictors)} transformed predictors")
-
-# Run stress group ANOVA
-stress_results_new = run_anova_analysis(df_transformed, 'stress_group', anova_predictors, 'Stress-Group')
-
-if len(stress_results_new) > 0:
-    rejected, corrected_p, _, _ = multipletests(
-        stress_results_new['P_Value'], 
-        alpha=0.05, 
-        method='fdr_bh'
-    )
-    stress_results_new['P_Value_Corrected'] = corrected_p
-    stress_results_new['Significant_FDR'] = rejected
-
-# Run anxiety group ANOVA
-anxiety_results_new = run_anova_analysis(df_transformed, 'anxiety_group', anova_predictors, 'Anxiety-Group')
-
-if len(anxiety_results_new) > 0:
-    rejected, corrected_p, _, _ = multipletests(
-        anxiety_results_new['P_Value'], 
-        alpha=0.05, 
-        method='fdr_bh'
-    )
-    anxiety_results_new['P_Value_Corrected'] = corrected_p
-    anxiety_results_new['Significant_FDR'] = rejected
-
-# ============================================================================
-# STEP 11: SAVE ANOVA RESULTS
-# ============================================================================
-
-print("\n" + "="*80)
-print("SAVING ANOVA RESULTS")
-print("="*80)
-
-anova_path = f'{base_path}anova/'
-
-# Save new ANOVA results
-stress_anova_file = f'{anova_path}stress_anova_results_new_variables.csv'
-anxiety_anova_file = f'{anova_path}anxiety_anova_results_new_variables.csv'
-
-stress_results_new.to_csv(stress_anova_file, index=False)
-anxiety_results_new.to_csv(anxiety_anova_file, index=False)
-
-print(f"✓ Stress ANOVA results: {stress_anova_file}")
-print(f"✓ Anxiety ANOVA results: {anxiety_anova_file}")
-
-# ============================================================================
-# STEP 12: DISPLAY KEY FINDINGS
-# ============================================================================
-
-print("\n" + "="*80)
-print("ANOVA RESULTS SUMMARY - STRESS GROUPS")
-print("="*80)
-
-sig_stress = stress_results_new[stress_results_new['Significant_FDR'] == True].sort_values('Eta_Squared', ascending=False)
-print(f"\nSignificant predictors (FDR corrected): {len(sig_stress)}")
-if len(sig_stress) > 0:
-    print("\nTop 10 by effect size:")
-    display_cols = ['Variable', 'ANOVA_Type', 'P_Value_Corrected', 'Eta_Squared', 'Low_Mean', 'Medium_Mean', 'High_Mean']
-    print(sig_stress[display_cols].head(10).to_string(index=False))
-
-print("\n" + "="*80)
-print("ANOVA RESULTS SUMMARY - ANXIETY GROUPS")
-print("="*80)
-
-sig_anxiety = anxiety_results_new[anxiety_results_new['Significant_FDR'] == True].sort_values('Eta_Squared', ascending=False)
-print(f"\nSignificant predictors (FDR corrected): {len(sig_anxiety)}")
-if len(sig_anxiety) > 0:
-    print("\nTop 10 by effect size:")
-    print(sig_anxiety[display_cols].head(10).to_string(index=False))
-
-# ============================================================================
-# STEP 13: HIGHLIGHT NEW FINDINGS
-# ============================================================================
-
-print("\n" + "="*80)
-print("NEW VARIABLES - INITIAL FINDINGS")
-print("="*80)
-
-new_vars_in_analysis = [
-    'last_sleep_stage',
-    'respiratory_rate_summary_rem_sleep_signal_to_noise',
-    'rem_avg_segment_duration_minutes',
-    'minute_spo2_value_min'
-]
-
-print("\nChecking significance of newly added variables:")
-for var in new_vars_in_analysis:
-    # Check stress
-    stress_row = stress_results_new[stress_results_new['Variable'] == var]
-    if len(stress_row) > 0:
-        sig = "✓ SIGNIFICANT" if stress_row['Significant_FDR'].values[0] else "✗ Not significant"
-        p_val = stress_row['P_Value_Corrected'].values[0]
-        eta = stress_row['Eta_Squared'].values[0]
-        print(f"\n{var} (STRESS):")
-        print(f"  {sig} | p={p_val:.4f}, η²={eta:.4f}")
-    
-    # Check anxiety
-    anxiety_row = anxiety_results_new[anxiety_results_new['Variable'] == var]
-    if len(anxiety_row) > 0:
-        sig = "✓ SIGNIFICANT" if anxiety_row['Significant_FDR'].values[0] else "✗ Not significant"
-        p_val = anxiety_row['P_Value_Corrected'].values[0]
-        eta = anxiety_row['Eta_Squared'].values[0]
-        print(f"{var} (ANXIETY):")
-        print(f"  {sig} | p={p_val:.4f}, η²={eta:.4f}")
-
-print("\n" + "="*80)
-print("READY FOR ML MODELING!")
-print("="*80)
-print("\nNext steps:")
-print("1. Load the ML-ready dataset:")
-print(f"   df = pd.read_csv('{output_ml}')")
-print("\n2. Split features and targets:")
-print("   X = df.drop(['stress_level', 'anxiety_level'], axis=1)")
-print("   y_stress = df['stress_level']")
-print("   y_anxiety = df['anxiety_level']")
-print("\n3. Handle missing data (if any):")
-print("   from sklearn.impute import SimpleImputer")
-print("   imputer = SimpleImputer(strategy='median')")
-print("   X_imputed = imputer.fit_transform(X)")
-print("\n4. Split train/test and start modeling!")
-print("   from sklearn.model_selection import train_test_split")
-print("   X_train, X_test, y_train, y_test = train_test_split(X_imputed, y_stress, test_size=0.2)")
-
-print("\n" + "="*80)
-print("ALL ANALYSES COMPLETE!")
-print("="*80)
