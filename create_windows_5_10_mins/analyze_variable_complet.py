@@ -12,8 +12,8 @@ print("="*80)
 
 # Try to find any available ML dataset
 possible_files = [
-    "enriched/ml_ready_30min_window_enriched.csv",
-    "enriched/ml_ready_60min_window_enriched.csv"#,
+    "enriched/ml_ready_5min_window_enriched.csv",
+    "enriched/ml_ready_10min_window_enriched.csv"#,
     #"enriched/ml_ready_combined_windows_enriched.csv"
 ]
 
@@ -70,12 +70,12 @@ for col in feature_cols:
     stat_type = "N/A"
     
     # Check for window prefix
-    if col.startswith('w30_'):
-        window = "30min"
-        base_var = col.replace('w30_', '')
-    elif col.startswith('w60_'):
-        window = "60min"
-        base_var = col.replace('w60_', '')
+    if col.startswith('w5_'):
+        window = "5min"
+        base_var = col.replace('w5_', '')
+    elif col.startswith('w10_'):
+        window = "10min"
+        base_var = col.replace('w10_', '')
     
     # Check for statistic suffix
     for suffix in ['_mean', '_std', '_min', '_max', '_median', '_count']:
@@ -237,11 +237,11 @@ if len(excellent) > 0:
     print(f"\n   👉 RECOMMENDATION: Start your ML modeling with this variable!")
 
 # Save detailed report
-output_file = os.path.join(ml_dir, "variable_completeness_analysis.csv")
+output_file = os.path.join(ml_dir, "variable_completeness_analysis_10_5min.csv")
 completeness_df.to_csv(output_file, index=False)
 print(f"\n✓ Detailed analysis saved to: {output_file}")
 
-summary_file = os.path.join(ml_dir, "variable_summary.csv")
+summary_file = os.path.join(ml_dir, "variable_summary_5_10min.csv")
 variable_summary.to_csv(summary_file, index=False)
 print(f"✓ Summary saved to: {summary_file}")
 

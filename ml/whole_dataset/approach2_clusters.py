@@ -10,12 +10,19 @@ from xgboost import XGBClassifier
 from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, f1_score, precision_score, recall_score, roc_auc_score, roc_curve
+import matplotlib.pyplot as plt
 import warnings
+import os
 warnings.filterwarnings('ignore')
 
 # HARDCODED PATHS
 INPUT_PATH = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/data_with_exam_features.csv'
-OUTPUT_PATH = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/model_results_binary_clustering.csv'
+OUTPUT_PATH = '/Users/YusMolina/Downloads/smieae/results/whole_dataset/random_split/model2/model_2.csv'
+ROC_STRESS_PATH = '/Users/YusMolina/Downloads/smieae/results/whole_dataset/random_split/model2/roc_curve_stress.png'
+ROC_ANXIETY_PATH = '/Users/YusMolina/Downloads/smieae/results/whole_dataset/random_split/model2/roc_curve_anxiety.png'
+os.makedirs('/Users/YusMolina/Downloads/smieae/results/whole_dataset/random_split/model2/', exist_ok=True)
+#os.makedirs(ROC_STRESS_PATH, exist_ok=True)
+#os.makedirs(ROC_ANXIETY_PATH, exist_ok=True)
 
 print("="*80)
 print("BINARY CLASSIFICATION WITH CLUSTERING AND ADVANCED FEATURES")
@@ -252,11 +259,11 @@ def prepare_binary_data(df, target_col, feature_cols):
             y_train, y_val, y_test, p33, p67)
 
 # ============================================================================
-# STEP 4: TRAIN INDIVIDUAL MODELS AND ENSEMBLE
+# STEP 4: TRAIN INDIVIDUAL MODELS AND ENSEMBLE + PLOT ROC CURVES
 # ============================================================================
 
-def train_evaluate_binary_models(X_train, X_val, X_test, y_train, y_val, y_test, target_name):
-    """Train and evaluate binary classification models + ensemble"""
+def train_evaluate_binary_models(X_train, X_val, X_test, y_train, y_val, y_test, target_name, roc_output_path):
+    """Train and evaluate binary classification models + ensemble + plot ROC curves"""
     
     print(f"\n{'='*80}")
     print(f"TRAINING MODELS FOR: {target_name}")
@@ -282,6 +289,7 @@ def train_evaluate_binary_models(X_train, X_val, X_test, y_train, y_val, y_test,
     }
     
     results = {}
+    roc_data = {}  # Store ROC curve data for plotting
     
     for model_name, model in models.items():
         print(f"\n{'-'*80}")
@@ -296,10 +304,12 @@ def train_evaluate_binary_models(X_train, X_val, X_test, y_train, y_val, y_test,
         y_val_pred = model.predict(X_val)
         y_test_pred = model.predict(X_test)
         
-        # Get probabilities for AUC
+        # Get probabilities for AUC and ROC curve
         if hasattr(model, 'predict_proba'):
             y_test_proba = model.predict_proba(X_test)[:, 1]
             auc = roc_auc_score(y_test, y_test_proba)
+            fpr, tpr, _ = roc_curve(y_test, y_test_proba)
+            roc_data[model_name] = {'fpr': fpr, 'tpr': tpr, 'auc': auc}
         else:
             auc = np.nan
         
@@ -395,6 +405,10 @@ def train_evaluate_binary_models(X_train, X_val, X_test, y_train, y_val, y_test,
     test_recall_ens = recall_score(y_test, y_test_pred_ens)
     auc_ens = roc_auc_score(y_test, y_test_proba_ens)
     
+    # ROC curve for ensemble
+    fpr_ens, tpr_ens, _ = roc_curve(y_test, y_test_proba_ens)
+    roc_data['Ensemble (Soft Voting)'] = {'fpr': fpr_ens, 'tpr': tpr_ens, 'auc': auc_ens}
+    
     results['Ensemble (Soft Voting)'] = {
         'train_accuracy': train_acc_ens,
         'val_accuracy': val_acc_ens,
@@ -430,6 +444,54 @@ def train_evaluate_binary_models(X_train, X_val, X_test, y_train, y_val, y_test,
     else:
         print(f"\n✓ Good generalization (train-test gap: {overfit_score_ens:.4f})")
     
+    # ============================================================================
+    # PLOT ROC CURVES
+    # ============================================================================
+    
+    print(f"\n{'='*80}")
+    print(f"GENERATING ROC CURVE PLOT")
+    print(f"{'='*80}")
+    
+    plt.figure(figsize=(10, 8))
+    
+    # Define colors for each model
+    colors = {
+        'Logistic Regression': '#1f77b4',
+        'Random Forest': '#ff7f0e',
+        'XGBoost': '#2ca02c',
+        'SVM (RBF)': '#d62728',
+        'Naive Bayes': '#9467bd',
+        'Ensemble (Soft Voting)': '#000000'  # Black for ensemble
+    }
+    
+    # Plot ROC curve for each model
+    for model_name, data in roc_data.items():
+        linestyle = '--' if model_name == 'Ensemble (Soft Voting)' else '-'
+        linewidth = 3 if model_name == 'Ensemble (Soft Voting)' else 2
+        plt.plot(data['fpr'], data['tpr'], 
+                color=colors[model_name],
+                linestyle=linestyle,
+                linewidth=linewidth,
+                label=f"{model_name} (AUC = {data['auc']:.3f})")
+    
+    # Plot diagonal (random classifier)
+    plt.plot([0, 1], [0, 1], 'k:', linewidth=1.5, label='Random Classifier (AUC = 0.500)')
+    
+    # Formatting
+    plt.xlabel('False Positive Rate', fontsize=12, fontweight='bold')
+    plt.ylabel('True Positive Rate', fontsize=12, fontweight='bold')
+    plt.title(f'ROC Curves - {target_name}', fontsize=14, fontweight='bold')
+    plt.legend(loc='lower right', fontsize=10, framealpha=0.9)
+    plt.grid(True, alpha=0.3, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.tight_layout()
+    
+    # Save figure
+    plt.savefig(roc_output_path, dpi=300, bbox_inches='tight')
+    print(f"\nROC curve saved to: {roc_output_path}")
+    plt.close()
+    
     return results
 
 # ============================================================================
@@ -445,7 +507,8 @@ X_train_stress, X_val_stress, X_test_stress, y_train_stress, y_val_stress, y_tes
 stress_results = train_evaluate_binary_models(
     X_train_stress, X_val_stress, X_test_stress,
     y_train_stress, y_val_stress, y_test_stress,
-    "STRESS LEVEL (Binary)"
+    "STRESS LEVEL (Binary)",
+    ROC_STRESS_PATH
 )
 
 # Prepare binary data for anxiety
@@ -457,7 +520,8 @@ X_train_anxiety, X_val_anxiety, X_test_anxiety, y_train_anxiety, y_val_anxiety, 
 anxiety_results = train_evaluate_binary_models(
     X_train_anxiety, X_val_anxiety, X_test_anxiety,
     y_train_anxiety, y_val_anxiety, y_test_anxiety,
-    "ANXIETY LEVEL (Binary)"
+    "ANXIETY LEVEL (Binary)",
+    ROC_ANXIETY_PATH
 )
 
 # ============================================================================
@@ -506,6 +570,12 @@ print(f"  Validation Accuracy: {best_anxiety_model[1]['val_accuracy']:.4f}")
 print(f"  Test Accuracy: {best_anxiety_model[1]['test_accuracy']:.4f}")
 print(f"  Test F1: {best_anxiety_model[1]['test_f1']:.4f}")
 print(f"  Test AUC: {best_anxiety_model[1]['test_auc']:.4f}")
+
+print("\n" + "="*80)
+print("ROC CURVES SAVED")
+print("="*80)
+print(f"Stress ROC curve: {ROC_STRESS_PATH}")
+print(f"Anxiety ROC curve: {ROC_ANXIETY_PATH}")
 
 print("\n" + "="*80)
 print("ANALYSIS COMPLETE")

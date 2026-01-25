@@ -16,22 +16,22 @@ print("="*70)
 # Load the aggregated files
 print("\nStep 1: Loading aggregated data files...")
 
-agg_30min_path = os.path.join(processed_dir, "fitbit_30min_window_aggregated.csv")
-agg_60min_path = os.path.join(processed_dir, "fitbit_1hour_window_aggregated.csv")
+agg_5min_path = os.path.join(processed_dir, "fitbit_5min_window_aggregated.csv")
+agg_10min_path = os.path.join(processed_dir, "fitbit_10min_window_aggregated.csv")
 
-if not os.path.exists(agg_30min_path):
-    print(f"ERROR: File not found: {agg_30min_path}")
+if not os.path.exists(agg_5min_path):
+    print(f"ERROR: File not found: {agg_5min_path}")
     exit(1)
 
-if not os.path.exists(agg_60min_path):
-    print(f"ERROR: File not found: {agg_60min_path}")
+if not os.path.exists(agg_10min_path):
+    print(f"ERROR: File not found: {agg_10min_path}")
     exit(1)
 
-df_30min = pd.read_csv(agg_30min_path)
-df_60min = pd.read_csv(agg_60min_path)
+df_5min = pd.read_csv(agg_5min_path)
+df_10min = pd.read_csv(agg_10min_path)
 
-print(f"✓ Loaded 30-minute window data: {len(df_30min)} rows")
-print(f"✓ Loaded 60-minute window data: {len(df_60min)} rows")
+print(f"✓ Loaded 5-minute window data: {len(df_5min)} rows")
+print(f"✓ Loaded 10-minute window data: {len(df_10min)} rows")
 
 # ==============================================================================
 # PART 1: CREATE ML-READY DATASETS (SEPARATE)
@@ -97,42 +97,42 @@ def create_ml_dataset(df, window_name, min_completeness=10.0):
     return ml_df, features_to_keep, target_cols, feature_completeness, features_removed
 
 # Create ML datasets for both windows (filtering features with <10% completeness)
-ml_30min, features_30min, targets_30min, completeness_30min, removed_30min = create_ml_dataset(df_30min, "30-minute", min_completeness=10.0)
-ml_60min, features_60min, targets_60min, completeness_60min, removed_60min = create_ml_dataset(df_60min, "60-minute", min_completeness=10.0)
+ml_5min, features_5min, targets_5min, completeness_5min, removed_5min = create_ml_dataset(df_5min, "5-minute", min_completeness=10.0)
+ml_10min, features_10min, targets_10min, completeness_10min, removed_10min = create_ml_dataset(df_10min, "10-minute", min_completeness=10.0)
 
 # Save ML-ready datasets
-output_30min = os.path.join(output_dir, "ml_ready_30min_window.csv")
-output_60min = os.path.join(output_dir, "ml_ready_60min_window.csv")
+output_5min = os.path.join(output_dir, "ml_ready_5min_window.csv")
+output_10min = os.path.join(output_dir, "ml_ready_10min_window.csv")
 
-ml_30min.to_csv(output_30min, index=False)
-ml_60min.to_csv(output_60min, index=False)
+ml_5min.to_csv(output_5min, index=False)
+ml_10min.to_csv(output_10min, index=False)
 
 # Save list of removed features for reference
-if removed_30min:
-    removed_30min_df = pd.DataFrame(removed_30min, columns=['feature_name', 'completeness_pct'])
-    removed_30min_df = removed_30min_df.sort_values('completeness_pct', ascending=True)
-    output_removed_30min = os.path.join(output_dir, "removed_features_30min.csv")
-    removed_30min_df.to_csv(output_removed_30min, index=False)
-    print(f"\n✓ Saved list of removed features (30-min): {output_removed_30min}")
+if removed_5min:
+    removed_5min_df = pd.DataFrame(removed_5min, columns=['feature_name', 'completeness_pct'])
+    removed_5min_df = removed_5min_df.sort_values('completeness_pct', ascending=True)
+    output_removed_5min = os.path.join(output_dir, "removed_features_5min.csv")
+    removed_5min_df.to_csv(output_removed_5min, index=False)
+    print(f"\n✓ Saved list of removed features (5-min): {output_removed_5min}")
 
-if removed_60min:
-    removed_60min_df = pd.DataFrame(removed_60min, columns=['feature_name', 'completeness_pct'])
-    removed_60min_df = removed_60min_df.sort_values('completeness_pct', ascending=True)
-    output_removed_60min = os.path.join(output_dir, "removed_features_60min.csv")
-    removed_60min_df.to_csv(output_removed_60min, index=False)
-    print(f"\n✓ Saved list of removed features (60-min): {output_removed_60min}")
+if removed_10min:
+    removed_10min_df = pd.DataFrame(removed_10min, columns=['feature_name', 'completeness_pct'])
+    removed_10min_df = removed_10min_df.sort_values('completeness_pct', ascending=True)
+    output_removed_10min = os.path.join(output_dir, "removed_features_10min.csv")
+    removed_10min_df.to_csv(output_removed_10min, index=False)
+    print(f"\n✓ Saved list of removed features (10-min): {output_removed_10min}")
 
-print(f"\n✓ Saved 30-minute ML dataset: {output_30min}")
-print(f"  Shape: {ml_30min.shape} (rows x columns)")
-print(f"  Features: {len(features_30min)}")
-print(f"  Targets: {len(targets_30min)}")
-print(f"  Unique users: {ml_30min['userid'].nunique()}")
+print(f"\n✓ Saved 5-minute ML dataset: {output_5min}")
+print(f"  Shape: {ml_5min.shape} (rows x columns)")
+print(f"  Features: {len(features_5min)}")
+print(f"  Targets: {len(targets_5min)}")
+print(f"  Unique users: {ml_5min['userid'].nunique()}")
 
-print(f"\n✓ Saved 60-minute ML dataset: {output_60min}")
-print(f"  Shape: {ml_60min.shape} (rows x columns)")
-print(f"  Features: {len(features_60min)}")
-print(f"  Targets: {len(targets_60min)}")
-print(f"  Unique users: {ml_60min['userid'].nunique()}")
+print(f"\n✓ Saved 10-minute ML dataset: {output_10min}")
+print(f"  Shape: {ml_10min.shape} (rows x columns)")
+print(f"  Features: {len(features_10min)}")
+print(f"  Targets: {len(targets_10min)}")
+print(f"  Unique users: {ml_10min['userid'].nunique()}")
 
 # ==============================================================================
 # PART 2: DATA COMPLETENESS ANALYSIS
@@ -179,21 +179,21 @@ def create_completeness_report(df, feature_cols, window_name):
     return pd.DataFrame(completeness_data)
 
 # Create completeness reports
-completeness_30min_df = create_completeness_report(ml_30min, features_30min, "30-minute")
-completeness_60min_df = create_completeness_report(ml_60min, features_60min, "60-minute")
+completeness_5min_df = create_completeness_report(ml_5min, features_5min, "5-minute")
+completeness_10min_df = create_completeness_report(ml_10min, features_10min, "10-minute")
 
 # Save individual completeness reports
-output_completeness_30min = os.path.join(output_dir, "feature_completeness_30min.csv")
-output_completeness_60min = os.path.join(output_dir, "feature_completeness_60min.csv")
+output_completeness_5min = os.path.join(output_dir, "feature_completeness_5min.csv")
+output_completeness_10min = os.path.join(output_dir, "feature_completeness_10min.csv")
 
-completeness_30min_df.to_csv(output_completeness_30min, index=False)
-completeness_60min_df.to_csv(output_completeness_60min, index=False)
+completeness_5min_df.to_csv(output_completeness_5min, index=False)
+completeness_10min_df.to_csv(output_completeness_10min, index=False)
 
-print(f"\n✓ Saved 30-minute completeness report: {output_completeness_30min}")
-print(f"  Features analyzed: {len(completeness_30min_df)}")
+print(f"\n✓ Saved 5-minute completeness report: {output_completeness_5min}")
+print(f"  Features analyzed: {len(completeness_5min_df)}")
 
-print(f"\n✓ Saved 60-minute completeness report: {output_completeness_60min}")
-print(f"  Features analyzed: {len(completeness_60min_df)}")
+print(f"\n✓ Saved 10-minute completeness report: {output_completeness_10min}")
+print(f"  Features analyzed: {len(completeness_10min_df)}")
 
 # ==============================================================================
 # PART 3: VARIABLE COMPLETENESS SUMMARIES
@@ -240,35 +240,35 @@ def create_variable_summary(completeness_df, window_name):
     return pd.DataFrame(variable_summary).sort_values('avg_completeness', ascending=False)
 
 # Create variable summaries
-var_summary_30min = create_variable_summary(completeness_30min_df, "30-minute")
-var_summary_60min = create_variable_summary(completeness_60min_df, "60-minute")
+var_summary_5min = create_variable_summary(completeness_5min_df, "5-minute")
+var_summary_10min = create_variable_summary(completeness_10min_df, "10-minute")
 
 # Save variable summaries
-output_var_summary_30min = os.path.join(output_dir, "variable_summary_30min.csv")
-output_var_summary_60min = os.path.join(output_dir, "variable_summary_60min.csv")
+output_var_summary_5min = os.path.join(output_dir, "variable_summary_5min.csv")
+output_var_summary_10min = os.path.join(output_dir, "variable_summary_10min.csv")
 
-var_summary_30min.to_csv(output_var_summary_30min, index=False)
-var_summary_60min.to_csv(output_var_summary_60min, index=False)
+var_summary_5min.to_csv(output_var_summary_5min, index=False)
+var_summary_10min.to_csv(output_var_summary_10min, index=False)
 
-print(f"\n✓ Saved 30-minute variable summary: {output_var_summary_30min}")
-print(f"  Unique variables: {len(var_summary_30min)}")
+print(f"\n✓ Saved 5-minute variable summary: {output_var_summary_5min}")
+print(f"  Unique variables: {len(var_summary_5min)}")
 
-print(f"\n✓ Saved 60-minute variable summary: {output_var_summary_60min}")
-print(f"  Unique variables: {len(var_summary_60min)}")
+print(f"\n✓ Saved 10-minute variable summary: {output_var_summary_10min}")
+print(f"  Unique variables: {len(var_summary_10min)}")
 
 # ==============================================================================
 # PART 4: DISPLAY TOP/BOTTOM VARIABLES
 # ==============================================================================
 
 print("\n" + "="*70)
-print("TOP 20 MOST COMPLETE VARIABLES (30-MINUTE WINDOW)")
+print("TOP 20 MOST COMPLETE VARIABLES (5-MINUTE WINDOW)")
 print("="*70)
 
-top_20_30min = var_summary_30min.head(20)
+top_20_5min = var_summary_5min.head(20)
 print("\n{:<50} {:<15} {:<10}".format("Variable", "Avg Complete (%)", "Stats Count"))
 print("-" * 75)
 
-for _, row in top_20_30min.iterrows():
+for _, row in top_20_5min.iterrows():
     var_name = row['variable_name']
     if len(var_name) > 47:
         var_name = var_name[:44] + "..."
@@ -279,14 +279,14 @@ for _, row in top_20_30min.iterrows():
     ))
 
 print("\n" + "="*70)
-print("TOP 20 MOST COMPLETE VARIABLES (60-MINUTE WINDOW)")
+print("TOP 20 MOST COMPLETE VARIABLES (10-MINUTE WINDOW)")
 print("="*70)
 
-top_20_60min = var_summary_60min.head(20)
+top_20_10min = var_summary_10min.head(20)
 print("\n{:<50} {:<15} {:<10}".format("Variable", "Avg Complete (%)", "Stats Count"))
 print("-" * 75)
 
-for _, row in top_20_60min.iterrows():
+for _, row in top_20_10min.iterrows():
     var_name = row['variable_name']
     if len(var_name) > 47:
         var_name = var_name[:44] + "..."
@@ -304,7 +304,7 @@ print("\n" + "="*70)
 print("DATASET SUMMARY STATISTICS")
 print("="*70)
 
-summary_stats_30min = {
+summary_stats_5min = {
     'metric': [
         'Total responses',
         'Total features',
@@ -316,18 +316,18 @@ summary_stats_30min = {
         'Features with >50% completeness'
     ],
     'value': [
-        len(ml_30min),
-        len(features_30min),
-        len(targets_30min),
-        ml_30min['userid'].nunique(),
-        completeness_30min_df['completeness_pct'].mean(),
-        completeness_30min_df['completeness_pct'].median(),
-        (completeness_30min_df['completeness_pct'] > 80).sum(),
-        (completeness_30min_df['completeness_pct'] > 50).sum()
+        len(ml_5min),
+        len(features_5min),
+        len(targets_5min),
+        ml_5min['userid'].nunique(),
+        completeness_5min_df['completeness_pct'].mean(),
+        completeness_5min_df['completeness_pct'].median(),
+        (completeness_5min_df['completeness_pct'] > 80).sum(),
+        (completeness_5min_df['completeness_pct'] > 50).sum()
     ]
 }
 
-summary_stats_60min = {
+summary_stats_10min = {
     'metric': [
         'Total responses',
         'Total features',
@@ -339,34 +339,34 @@ summary_stats_60min = {
         'Features with >50% completeness'
     ],
     'value': [
-        len(ml_60min),
-        len(features_60min),
-        len(targets_60min),
-        ml_60min['userid'].nunique(),
-        completeness_60min_df['completeness_pct'].mean(),
-        completeness_60min_df['completeness_pct'].median(),
-        (completeness_60min_df['completeness_pct'] > 80).sum(),
-        (completeness_60min_df['completeness_pct'] > 50).sum()
+        len(ml_10min),
+        len(features_10min),
+        len(targets_10min),
+        ml_10min['userid'].nunique(),
+        completeness_10min_df['completeness_pct'].mean(),
+        completeness_10min_df['completeness_pct'].median(),
+        (completeness_10min_df['completeness_pct'] > 80).sum(),
+        (completeness_10min_df['completeness_pct'] > 50).sum()
     ]
 }
 
-summary_30min_df = pd.DataFrame(summary_stats_30min)
-summary_60min_df = pd.DataFrame(summary_stats_60min)
+summary_5min_df = pd.DataFrame(summary_stats_5min)
+summary_10min_df = pd.DataFrame(summary_stats_10min)
 
 # Save summaries
-output_summary_30min = os.path.join(output_dir, "dataset_summary_30min.csv")
-output_summary_60min = os.path.join(output_dir, "dataset_summary_60min.csv")
+output_summary_5min = os.path.join(output_dir, "dataset_summary_5min.csv")
+output_summary_10min = os.path.join(output_dir, "dataset_summary_10min.csv")
 
-summary_30min_df.to_csv(output_summary_30min, index=False)
-summary_60min_df.to_csv(output_summary_60min, index=False)
+summary_5min_df.to_csv(output_summary_5min, index=False)
+summary_10min_df.to_csv(output_summary_10min, index=False)
 
-print(f"\n✓ Saved 30-minute summary: {output_summary_30min}")
-print(f"\n30-MINUTE WINDOW SUMMARY:")
-print(summary_30min_df.to_string(index=False))
+print(f"\n✓ Saved 5-minute summary: {output_summary_5min}")
+print(f"\n5-MINUTE WINDOW SUMMARY:")
+print(summary_5min_df.to_string(index=False))
 
-print(f"\n✓ Saved 60-minute summary: {output_summary_60min}")
-print(f"\n60-MINUTE WINDOW SUMMARY:")
-print(summary_60min_df.to_string(index=False))
+print(f"\n✓ Saved 10-minute summary: {output_summary_10min}")
+print(f"\n10-MINUTE WINDOW SUMMARY:")
+print(summary_10min_df.to_string(index=False))
 
 # ==============================================================================
 # FINAL SUMMARY
@@ -376,35 +376,35 @@ print("\n" + "="*70)
 print("✓ ALL PROCESSING COMPLETE!")
 print("="*70)
 
-print("\nGenerated files for 30-MINUTE WINDOW:")
-print(f"  1. {output_30min}")
-print(f"  2. {output_completeness_30min}")
-print(f"  3. {output_var_summary_30min}")
-print(f"  4. {output_summary_30min}")
-if removed_30min:
-    print(f"  5. {output_removed_30min} ({len(removed_30min)} features removed)")
+print("\nGenerated files for 5-MINUTE WINDOW:")
+print(f"  1. {output_5min}")
+print(f"  2. {output_completeness_5min}")
+print(f"  3. {output_var_summary_5min}")
+print(f"  4. {output_summary_5min}")
+if removed_5min:
+    print(f"  5. {output_removed_5min} ({len(removed_5min)} features removed)")
 
-print("\nGenerated files for 60-MINUTE WINDOW:")
-print(f"  1. {output_60min}")
-print(f"  2. {output_completeness_60min}")
-print(f"  3. {output_var_summary_60min}")
-print(f"  4. {output_summary_60min}")
-if removed_60min:
-    print(f"  5. {output_removed_60min} ({len(removed_60min)} features removed)")
+print("\nGenerated files for 10-MINUTE WINDOW:")
+print(f"  1. {output_10min}")
+print(f"  2. {output_completeness_10min}")
+print(f"  3. {output_var_summary_10min}")
+print(f"  4. {output_summary_10min}")
+if removed_10min:
+    print(f"  5. {output_removed_10min} ({len(removed_10min)} features removed)")
 
 print("\nRecommendations for ML:")
-print("  30-MINUTE WINDOW:")
-print(f"    - Main dataset: ml_ready_30min_window.csv")
-print(f"    - {len(ml_30min)} total responses from {ml_30min['userid'].nunique()} users")
-print(f"    - {len(features_30min)} features (after filtering), {len(targets_30min)} targets")
-print(f"    - {len(removed_30min)} features removed due to <10% completeness")
-print(f"    - Avg feature completeness: {completeness_30min_df['completeness_pct'].mean():.1f}%")
-print("\n  60-MINUTE WINDOW:")
-print(f"    - Main dataset: ml_ready_60min_window.csv")
-print(f"    - {len(ml_60min)} total responses from {ml_60min['userid'].nunique()} users")
-print(f"    - {len(features_60min)} features (after filtering), {len(targets_60min)} targets")
-print(f"    - {len(removed_60min)} features removed due to <10% completeness")
-print(f"    - Avg feature completeness: {completeness_60min_df['completeness_pct'].mean():.1f}%")
+print("  5-MINUTE WINDOW:")
+print(f"    - Main dataset: ml_ready_5min_window.csv")
+print(f"    - {len(ml_5min)} total responses from {ml_5min['userid'].nunique()} users")
+print(f"    - {len(features_5min)} features (after filtering), {len(targets_5min)} targets")
+print(f"    - {len(removed_5min)} features removed due to <10% completeness")
+print(f"    - Avg feature completeness: {completeness_5min_df['completeness_pct'].mean():.1f}%")
+print("\n  10-MINUTE WINDOW:")
+print(f"    - Main dataset: ml_ready_10min_window.csv")
+print(f"    - {len(ml_10min)} total responses from {ml_10min['userid'].nunique()} users")
+print(f"    - {len(features_10min)} features (after filtering), {len(targets_10min)} targets")
+print(f"    - {len(removed_10min)} features removed due to <10% completeness")
+print(f"    - Avg feature completeness: {completeness_10min_df['completeness_pct'].mean():.1f}%")
 print("\n  GENERAL TIPS:")
 print("    - Features with <10% completeness have been automatically removed")
 print("    - Consider further filtering features with <50% completeness for robust models")

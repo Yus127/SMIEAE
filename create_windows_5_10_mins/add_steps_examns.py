@@ -210,8 +210,8 @@ print("="*70)
 
 # Find all ML-ready CSV files
 ml_files = [
-    "ml_ready_30min_window.csv",
-    "ml_ready_60min_window.csv"
+    "ml_ready_5min_window.csv",
+    "ml_ready_10min_window.csv"
 ]
 
 # Also check for optimized files if they exist

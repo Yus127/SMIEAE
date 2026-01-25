@@ -11,7 +11,7 @@ warnings.filterwarnings('ignore', category=pd.errors.DtypeWarning)
 # Define paths
 fitbit_dir = "/Users/YusMolina/Downloads/smieae/data/original_data/fitbit/consolidated_output"
 questionnaire_path = "/Users/YusMolina/Downloads/smieae/data/data_clean/daily_questions_cleaned.csv"
-output_dir = "/Users/YusMolina/Downloads/smieae/data/processed"
+output_dir = "/Users/YusMolina/Downloads/smieae/data/processed/5_10min"
 
 # Create output directory if it doesn't exist
 os.makedirs(output_dir, exist_ok=True)
@@ -151,10 +151,10 @@ if unmatched_users:
     print(f"⚠ Questionnaire users without Fitbit data: {sorted(unmatched_users)}")
 
 # Initialize lists to store results
-results_30min_detailed = []
-results_1hour_detailed = []
-results_30min_aggregated = []
-results_1hour_aggregated = []
+results_5min_detailed = []
+results_10min_detailed = []
+results_5min_aggregated = []
+results_10min_aggregated = []
 
 print("\n" + "="*70)
 print("PROCESSING DATA")
@@ -212,8 +212,8 @@ for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
             total_responses_processed += 1
             
             # Calculate time windows
-            time_30min_before = response_time - timedelta(minutes=30)
-            time_1hour_before = response_time - timedelta(hours=1)
+            time_5min_before = response_time - timedelta(minutes=5)
+            time_10min_before = response_time - timedelta(minutes=10)
             
             # Filter Fitbit data for the same date
             fitbit_same_date = fitbit_df[fitbit_df['timestamp'].dt.date == response_date.date()].copy()
@@ -221,38 +221,38 @@ for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
             if len(fitbit_same_date) == 0:
                 continue
             
-            # 30-minute window
-            fitbit_30min = fitbit_same_date[
-                (fitbit_same_date['timestamp'] >= time_30min_before) & 
+            # 5-minute window
+            fitbit_5min = fitbit_same_date[
+                (fitbit_same_date['timestamp'] >= time_5min_before) & 
                 (fitbit_same_date['timestamp'] < response_time)
             ].copy()
             
             # 1-hour window
-            fitbit_1hour = fitbit_same_date[
-                (fitbit_same_date['timestamp'] >= time_1hour_before) & 
+            fitbit_10min = fitbit_same_date[
+                (fitbit_same_date['timestamp'] >= time_10min_before) & 
                 (fitbit_same_date['timestamp'] < response_time)
             ].copy()
             
-            # Process 30-minute window
-            if len(fitbit_30min) > 0:
+            # Process 5-minute window
+            if len(fitbit_5min) > 0:
                 # Detailed records
-                fitbit_30min_detail = fitbit_30min.copy()
+                fitbit_5min_detail = fitbit_5min.copy()
                 for col in question_row.index:
                     if col not in ['timestamp']:
-                        fitbit_30min_detail[f'q_{col}'] = question_row[col]
-                fitbit_30min_detail['response_timestamp'] = response_time
-                fitbit_30min_detail['time_window'] = '30min'
-                fitbit_30min_detail['window_start'] = time_30min_before
-                fitbit_30min_detail['window_end'] = response_time
-                results_30min_detailed.append(fitbit_30min_detail)
+                        fitbit_5min_detail[f'q_{col}'] = question_row[col]
+                fitbit_5min_detail['response_timestamp'] = response_time
+                fitbit_5min_detail['time_window'] = '5min'
+                fitbit_5min_detail['window_start'] = time_5min_before
+                fitbit_5min_detail['window_end'] = response_time
+                results_5min_detailed.append(fitbit_5min_detail)
                 
                 # Aggregated statistics
                 agg_dict = {
                     'userid': quest_userid, 
                     'response_timestamp': response_time, 
-                    'window_start': time_30min_before, 
+                    'window_start': time_5min_before, 
                     'window_end': response_time,
-                    'record_count': len(fitbit_30min)
+                    'record_count': len(fitbit_5min)
                 }
                 
                 # Add questionnaire data
@@ -261,10 +261,10 @@ for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
                         agg_dict[f'q_{col}'] = question_row[col]
                 
                 # Calculate statistics for numerical columns
-                for col in fitbit_30min.columns:
+                for col in fitbit_5min.columns:
                     if col in numerical_cols:
                         try:
-                            col_data = pd.to_numeric(fitbit_30min[col], errors='coerce')
+                            col_data = pd.to_numeric(fitbit_5min[col], errors='coerce')
                             non_null = col_data.dropna()
                             if len(non_null) > 0:
                                 agg_dict[f'{col}_mean'] = non_null.mean()
@@ -276,28 +276,28 @@ for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
                         except:
                             pass
                 
-                results_30min_aggregated.append(agg_dict)
+                results_5min_aggregated.append(agg_dict)
             
             # Process 1-hour window
-            if len(fitbit_1hour) > 0:
+            if len(fitbit_10min) > 0:
                 # Detailed records
-                fitbit_1hour_detail = fitbit_1hour.copy()
+                fitbit_10min_detail = fitbit_10min.copy()
                 for col in question_row.index:
                     if col not in ['timestamp']:
-                        fitbit_1hour_detail[f'q_{col}'] = question_row[col]
-                fitbit_1hour_detail['response_timestamp'] = response_time
-                fitbit_1hour_detail['time_window'] = '1hour'
-                fitbit_1hour_detail['window_start'] = time_1hour_before
-                fitbit_1hour_detail['window_end'] = response_time
-                results_1hour_detailed.append(fitbit_1hour_detail)
+                        fitbit_10min_detail[f'q_{col}'] = question_row[col]
+                fitbit_10min_detail['response_timestamp'] = response_time
+                fitbit_10min_detail['time_window'] = '10min'
+                fitbit_10min_detail['window_start'] = time_10min_before
+                fitbit_10min_detail['window_end'] = response_time
+                results_10min_detailed.append(fitbit_10min_detail)
                 
                 # Aggregated statistics
                 agg_dict = {
                     'userid': quest_userid,
                     'response_timestamp': response_time,
-                    'window_start': time_1hour_before,
+                    'window_start': time_10min_before,
                     'window_end': response_time,
-                    'record_count': len(fitbit_1hour)
+                    'record_count': len(fitbit_10min)
                 }
                 
                 # Add questionnaire data
@@ -306,10 +306,10 @@ for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
                         agg_dict[f'q_{col}'] = question_row[col]
                 
                 # Calculate statistics for numerical columns
-                for col in fitbit_1hour.columns:
+                for col in fitbit_10min.columns:
                     if col in numerical_cols:
                         try:
-                            col_data = pd.to_numeric(fitbit_1hour[col], errors='coerce')
+                            col_data = pd.to_numeric(fitbit_10min[col], errors='coerce')
                             non_null = col_data.dropna()
                             if len(non_null) > 0:
                                 agg_dict[f'{col}_mean'] = non_null.mean()
@@ -321,15 +321,15 @@ for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
                         except:
                             pass
                 
-                results_1hour_aggregated.append(agg_dict)
+                results_10min_aggregated.append(agg_dict)
             
-            if len(fitbit_30min) > 0 or len(fitbit_1hour) > 0:
+            if len(fitbit_5min) > 0 or len(fitbit_10min) > 0:
                 response_count += 1
                 responses_with_data += 1
                 total_responses_with_data += 1
                 if response_count <= 5:  # Show first 5 responses
                     print(f"    ✓ Response {response_count} at {response_time.strftime('%Y-%m-%d %H:%M')}: "
-                          f"{len(fitbit_30min)} records (30min), {len(fitbit_1hour)} records (1h)")
+                          f"{len(fitbit_5min)} records (5min), {len(fitbit_10min)} records (10min)")
         
         if response_count > 5:
             print(f"    ... and {response_count - 5} more responses")
@@ -362,48 +362,48 @@ print("SAVING RESULTS")
 print("="*70)
 
 # Detailed data
-if results_30min_detailed:
-    final_30min_detailed = pd.concat(results_30min_detailed, ignore_index=True)
-    output_file = os.path.join(output_dir, "fitbit_30min_window_detailed.csv")
-    final_30min_detailed.to_csv(output_file, index=False)
-    print(f"\n✓ 30-minute window (detailed): {output_file}")
-    print(f"  Records: {len(final_30min_detailed):,}")
-    print(f"  Unique responses: {final_30min_detailed['response_timestamp'].nunique()}")
-    print(f"  Users: {final_30min_detailed['q_userid'].nunique()}")
+if results_5min_detailed:
+    final_5min_detailed = pd.concat(results_5min_detailed, ignore_index=True)
+    output_file = os.path.join(output_dir, "fitbit_5min_window_detailed.csv")
+    final_5min_detailed.to_csv(output_file, index=False)
+    print(f"\n✓ 5-minute window (detailed): {output_file}")
+    print(f"  Records: {len(final_5min_detailed):,}")
+    print(f"  Unique responses: {final_5min_detailed['response_timestamp'].nunique()}")
+    print(f"  Users: {final_5min_detailed['q_userid'].nunique()}")
 else:
-    print("\n⚠ No data for 30-minute window")
+    print("\n⚠ No data for 5-minute window")
 
-if results_1hour_detailed:
-    final_1hour_detailed = pd.concat(results_1hour_detailed, ignore_index=True)
-    output_file = os.path.join(output_dir, "fitbit_1hour_window_detailed.csv")
-    final_1hour_detailed.to_csv(output_file, index=False)
+if results_10min_detailed:
+    final_10min_detailed = pd.concat(results_10min_detailed, ignore_index=True)
+    output_file = os.path.join(output_dir, "fitbit_10min_window_detailed.csv")
+    final_10min_detailed.to_csv(output_file, index=False)
     print(f"\n✓ 1-hour window (detailed): {output_file}")
-    print(f"  Records: {len(final_1hour_detailed):,}")
-    print(f"  Unique responses: {final_1hour_detailed['response_timestamp'].nunique()}")
-    print(f"  Users: {final_1hour_detailed['q_userid'].nunique()}")
+    print(f"  Records: {len(final_10min_detailed):,}")
+    print(f"  Unique responses: {final_10min_detailed['response_timestamp'].nunique()}")
+    print(f"  Users: {final_10min_detailed['q_userid'].nunique()}")
 else:
     print("\n⚠ No data for 1-hour window")
 
 # Aggregated data
-if results_30min_aggregated:
-    final_30min_agg = pd.DataFrame(results_30min_aggregated)
-    output_file = os.path.join(output_dir, "fitbit_30min_window_aggregated.csv")
-    final_30min_agg.to_csv(output_file, index=False)
-    print(f"\n✓ 30-minute window (aggregated): {output_file}")
-    print(f"  Rows: {len(final_30min_agg)} (one per questionnaire response)")
-    print(f"  Users: {final_30min_agg['userid'].nunique()}")
+if results_5min_aggregated:
+    final_5min_agg = pd.DataFrame(results_5min_aggregated)
+    output_file = os.path.join(output_dir, "fitbit_5min_window_aggregated.csv")
+    final_5min_agg.to_csv(output_file, index=False)
+    print(f"\n✓ 5-minute window (aggregated): {output_file}")
+    print(f"  Rows: {len(final_5min_agg)} (one per questionnaire response)")
+    print(f"  Users: {final_5min_agg['userid'].nunique()}")
 
-if results_1hour_aggregated:
-    final_1hour_agg = pd.DataFrame(results_1hour_aggregated)
-    output_file = os.path.join(output_dir, "fitbit_1hour_window_aggregated.csv")
-    final_1hour_agg.to_csv(output_file, index=False)
+if results_10min_aggregated:
+    final_10min_agg = pd.DataFrame(results_10min_aggregated)
+    output_file = os.path.join(output_dir, "fitbit_10min_window_aggregated.csv")
+    final_10min_agg.to_csv(output_file, index=False)
     print(f"\n✓ 1-hour window (aggregated): {output_file}")
-    print(f"  Rows: {len(final_1hour_agg)} (one per questionnaire response)")
-    print(f"  Users: {final_1hour_agg['userid'].nunique()}")
+    print(f"  Rows: {len(final_10min_agg)} (one per questionnaire response)")
+    print(f"  Users: {final_10min_agg['userid'].nunique()}")
 
 # Combined detailed data
-if results_30min_detailed and results_1hour_detailed:
-    combined_detailed = pd.concat([final_30min_detailed, final_1hour_detailed], ignore_index=True)
+if results_5min_detailed and results_10min_detailed:
+    combined_detailed = pd.concat([final_5min_detailed, final_10min_detailed], ignore_index=True)
     output_file = os.path.join(output_dir, "fitbit_combined_windows_detailed.csv")
     combined_detailed.to_csv(output_file, index=False)
     print(f"\n✓ Combined windows (detailed): {output_file}")
