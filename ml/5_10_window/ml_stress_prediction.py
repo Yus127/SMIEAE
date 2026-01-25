@@ -24,7 +24,7 @@ sns.set_palette("husl")
 
 print("="*80)
 print("STRESS AND ANXIETY PREDICTION WITH PROPER DATA NORMALIZATION")
-print("SEPARATE ANALYSIS FOR 30MIN AND 60MIN WINDOWS")
+print("SEPARATE ANALYSIS FOR 5MIN AND 10MIN WINDOWS")
 print("TIME-SERIES SPLIT: 70% TRAIN - 15% VALIDATION - 15% TEST")
 print("="*80)
 
@@ -47,8 +47,8 @@ all_results = {}
 
 # Process each file separately
 for file_idx, file in enumerate(files):
-    window_type = "30min" if "30min" in file else "60min"
-    window_prefix = "w30" if "30min" in file else "w60"
+    window_type = "5min" if "5min" in file else "10min"
+    window_prefix = "w5" if "5min" in file else "w10"
     
     print("\n" + "="*80)
     print(f"PROCESSING: {window_type} WINDOW")
@@ -500,7 +500,7 @@ for file_idx, file in enumerate(files):
 
 # OVERALL COMPARISON
 print("\n\n" + "="*80)
-print("OVERALL COMPARISON: STRESS vs ANXIETY (30MIN vs 60MIN WINDOWS)")
+print("OVERALL COMPARISON: STRESS vs ANXIETY (5MIN vs 10MIN WINDOWS)")
 print("="*80)
 
 if all_results:
@@ -508,7 +508,7 @@ if all_results:
     print("BEST MODELS SUMMARY:")
     print("-"*80)
     
-    for window_type in ['30min', '60min']:
+    for window_type in ['5min', '10min']:
         if window_type in all_results:
             print(f"\n{window_type.upper()} Window:")
             for target_name in ['Stress', 'Anxiety']:
@@ -526,7 +526,7 @@ if all_results:
     print("-"*80)
     
     overall_comparison = []
-    for window_type in ['30min', '60min']:
+    for window_type in ['5min', '10min']:
         if window_type in all_results:
             for target_name in ['Stress', 'Anxiety']:
                 if target_name in all_results[window_type]:
@@ -547,7 +547,7 @@ print("   Time Series Split: 70% Train - 15% Val - 15% Test (chronological)")
 print("   ROC Curves: Generated for all models and targets")
 print("="*80)
 print(f"\nResults saved to: {output_dir}")
-print("  - 30min_window/")
+print("  - 5min_window/")
 print("    - stress/")
 print("      - plots/")
 print("        - roc_curve_*.png (individual model curves)")
@@ -556,7 +556,7 @@ print("    - anxiety/")
 print("      - plots/")
 print("        - roc_curve_*.png (individual model curves)")
 print("        - roc_curve_comparison_all_models.png")
-print("  - 60min_window/")
+print("  - 10min_window/")
 print("    - stress/")
 print("      - plots/ (same structure)")
 print("    - anxiety/")

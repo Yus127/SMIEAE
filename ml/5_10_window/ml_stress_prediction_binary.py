@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore')
 
 print("="*80)
 print("IMPROVED LSTM MODEL FOR STRESS & ANXIETY PREDICTION")
-print("TIME SERIES SPLIT (70-15-15) - SEPARATE 30MIN AND 60MIN WINDOWS")
+print("TIME SERIES SPLIT (70-15-15) - SEPARATE 5MIN AND 10MIN WINDOWS")
 print("="*80)
 
 np.random.seed(42)
@@ -40,8 +40,8 @@ all_results = {}
 
 # Process each window
 for file_idx, file in enumerate(files):
-    window_type = "30min" if "30min" in file else "60min"
-    window_prefix = "w30" if "30min" in file else "w60"
+    window_type = "5min" if "5min" in file else "10min"
+    window_prefix = "w5" if "5min" in file else "w10"
     
     print("\n" + "="*80)
     print(f"PROCESSING: {window_type.upper()} WINDOW")
@@ -571,7 +571,7 @@ for file_idx, file in enumerate(files):
 # OVERALL COMPARISON
 # ============================================================================
 print("\n\n" + "="*80)
-print("OVERALL COMPARISON: STRESS vs ANXIETY (30MIN vs 60MIN)")
+print("OVERALL COMPARISON: STRESS vs ANXIETY (5MIN vs 10MIN)")
 print("="*80)
 
 if all_results:
@@ -579,7 +579,7 @@ if all_results:
     print("LSTM MODEL SUMMARY:")
     print("-"*80)
     
-    for window_type in ['30min', '60min']:
+    for window_type in ['5min', '10min']:
         if window_type in all_results:
             print(f"\n{window_type.upper()} Window:")
             for target_name in ['Stress', 'Anxiety']:
@@ -594,7 +594,7 @@ if all_results:
     
     # Create overall summary CSV
     summary_data = []
-    for window_type in ['30min', '60min']:
+    for window_type in ['5min', '10min']:
         if window_type in all_results:
             for target_name in ['Stress', 'Anxiety']:
                 if target_name in all_results[window_type]:
@@ -625,7 +625,7 @@ print("   Architecture: Bidirectional LSTM (32→16 units)")
 print("   Binary Classification: Low vs High")
 print("="*80)
 print(f"\nResults saved to: {output_dir}")
-print("  - 30min_window/")
+print("  - 5min_window/")
 print("    - stress/")
 print("      - lstm_binary_model.keras")
 print("      - scaler_lstm.pkl")
@@ -634,7 +634,7 @@ print("        - training_history.png")
 print("        - confusion_matrix.png")
 print("        - roc_curve.png  ← NEW!")
 print("    - anxiety/")
-print("  - 60min_window/")
+print("  - 10min_window/")
 print("    - stress/")
 print("    - anxiety/")
 print("  - overall_lstm_summary.csv")
