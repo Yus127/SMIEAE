@@ -104,6 +104,8 @@ ml_60min, features_60min, targets_60min, completeness_60min, removed_60min = cre
 output_30min = os.path.join(output_dir, "ml_ready_30min_window.csv")
 output_60min = os.path.join(output_dir, "ml_ready_60min_window.csv")
 
+output_dir_removed_var =  os.path.join(output_dir, "removed_variables_summaries")
+
 ml_30min.to_csv(output_30min, index=False)
 ml_60min.to_csv(output_60min, index=False)
 
@@ -111,14 +113,14 @@ ml_60min.to_csv(output_60min, index=False)
 if removed_30min:
     removed_30min_df = pd.DataFrame(removed_30min, columns=['feature_name', 'completeness_pct'])
     removed_30min_df = removed_30min_df.sort_values('completeness_pct', ascending=True)
-    output_removed_30min = os.path.join(output_dir, "removed_features_30min.csv")
+    output_removed_30min = os.path.join(output_dir_removed_var, "removed_features_30min.csv")
     removed_30min_df.to_csv(output_removed_30min, index=False)
     print(f"\n✓ Saved list of removed features (30-min): {output_removed_30min}")
 
 if removed_60min:
     removed_60min_df = pd.DataFrame(removed_60min, columns=['feature_name', 'completeness_pct'])
     removed_60min_df = removed_60min_df.sort_values('completeness_pct', ascending=True)
-    output_removed_60min = os.path.join(output_dir, "removed_features_60min.csv")
+    output_removed_60min = os.path.join(output_dir_removed_var, "removed_features_60min.csv")
     removed_60min_df.to_csv(output_removed_60min, index=False)
     print(f"\n✓ Saved list of removed features (60-min): {output_removed_60min}")
 
@@ -183,8 +185,8 @@ completeness_30min_df = create_completeness_report(ml_30min, features_30min, "30
 completeness_60min_df = create_completeness_report(ml_60min, features_60min, "60-minute")
 
 # Save individual completeness reports
-output_completeness_30min = os.path.join(output_dir, "feature_completeness_30min.csv")
-output_completeness_60min = os.path.join(output_dir, "feature_completeness_60min.csv")
+output_completeness_30min = os.path.join(output_dir_removed_var, "feature_completeness_30min.csv")
+output_completeness_60min = os.path.join(output_dir_removed_var, "feature_completeness_60min.csv")
 
 completeness_30min_df.to_csv(output_completeness_30min, index=False)
 completeness_60min_df.to_csv(output_completeness_60min, index=False)
@@ -244,8 +246,8 @@ var_summary_30min = create_variable_summary(completeness_30min_df, "30-minute")
 var_summary_60min = create_variable_summary(completeness_60min_df, "60-minute")
 
 # Save variable summaries
-output_var_summary_30min = os.path.join(output_dir, "variable_summary_30min.csv")
-output_var_summary_60min = os.path.join(output_dir, "variable_summary_60min.csv")
+output_var_summary_30min = os.path.join(output_dir_removed_var, "variable_summary_30min.csv")
+output_var_summary_60min = os.path.join(output_dir_removed_var, "variable_summary_60min.csv")
 
 var_summary_30min.to_csv(output_var_summary_30min, index=False)
 var_summary_60min.to_csv(output_var_summary_60min, index=False)
@@ -354,8 +356,8 @@ summary_30min_df = pd.DataFrame(summary_stats_30min)
 summary_60min_df = pd.DataFrame(summary_stats_60min)
 
 # Save summaries
-output_summary_30min = os.path.join(output_dir, "dataset_summary_30min.csv")
-output_summary_60min = os.path.join(output_dir, "dataset_summary_60min.csv")
+output_summary_30min = os.path.join(output_dir_removed_var, "dataset_summary_30min.csv")
+output_summary_60min = os.path.join(output_dir_removed_var, "dataset_summary_60min.csv")
 
 summary_30min_df.to_csv(output_summary_30min, index=False)
 summary_60min_df.to_csv(output_summary_60min, index=False)

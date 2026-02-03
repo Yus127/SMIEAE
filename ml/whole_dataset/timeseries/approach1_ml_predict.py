@@ -4,7 +4,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
+from sklearn.svm import SVC
+from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import (classification_report, confusion_matrix, roc_curve, auc,
                              accuracy_score, precision_score, recall_score, f1_score, roc_auc_score)
 from sklearn.preprocessing import label_binarize
@@ -18,10 +22,12 @@ import os
 
 # PATHS
 INPUT_PATH = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/data_with_exam_features.csv'
-OUTPUT_DIR = '/Users/YusMolina/Downloads/smieae/results/whole_dataset/timeseries/model1/'
+OUTPUT_DIR = '/Users/YusMolina/Downloads/smieae/results/whole_dataset/timeseries/model_comparison/'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 print("="*80)
-print("COMPREHENSIVE MODEL ANALYSIS & VISUALIZATION - TIME SERIES SPLIT")
+print("MULTI-MODEL COMPARISON: STRESS & ANXIETY PREDICTION")
+print("TIME SERIES SPLIT (70% Train / 15% Val / 15% Test)")
 print("="*80)
 
 # Load data
@@ -46,20 +52,16 @@ def create_target_classes(series, p33, p67):
 
 def prepare_data_timeseries(df, target_col, feature_cols):
     """
-    Prepare data with time series split (70-15-15)
-    No shuffling to preserve temporal order
+    Prepare data with time-series aware splitting (no shuffling).
+    Split: 70% train, 15% validation, 15% test
     """
     df_clean = df[df[target_col].notna()].copy()
-    
-    # Calculate percentiles for class creation
     p33 = df_clean[target_col].quantile(0.33)
     p67 = df_clean[target_col].quantile(0.67)
-    
-    # Create target classes
     y = create_target_classes(df_clean[target_col], p33, p67)
     X = df_clean[feature_cols].copy()
     
-    # Time series split: 70-15-15
+    # Time series split: 70% train, 15% val, 15% test
     n_samples = len(X)
     train_size = int(0.70 * n_samples)
     val_size = int(0.15 * n_samples)
@@ -77,6 +79,11 @@ def prepare_data_timeseries(df, target_col, feature_cols):
     y_val = y.iloc[val_idx]
     y_test = y.iloc[test_idx]
     
+    print(f"\n{target_col} - Split sizes:")
+    print(f"  Train: {len(X_train)} samples ({len(X_train)/n_samples*100:.1f}%)")
+    print(f"  Val:   {len(X_val)} samples ({len(X_val)/n_samples*100:.1f}%)")
+    print(f"  Test:  {len(X_test)} samples ({len(X_test)/n_samples*100:.1f}%)")
+    
     # Imputation
     imputer = SimpleImputer(strategy='median')
     X_train_imputed = imputer.fit_transform(X_train)
@@ -89,20 +96,10 @@ def prepare_data_timeseries(df, target_col, feature_cols):
     X_val_scaled = scaler.transform(X_val_imputed)
     X_test_scaled = scaler.transform(X_test_imputed)
     
-    print(f"\n{target_col} - Split sizes:")
-    print(f"  Train: {len(X_train)} samples ({len(X_train)/n_samples*100:.1f}%)")
-    print(f"  Val:   {len(X_val)} samples ({len(X_val)/n_samples*100:.1f}%)")
-    print(f"  Test:  {len(X_test)} samples ({len(X_test)/n_samples*100:.1f}%)")
-    
-    print(f"\n{target_col} - Class distribution:")
-    print(f"  Train: {np.bincount(y_train)}")
-    print(f"  Val:   {np.bincount(y_val)}")
-    print(f"  Test:  {np.bincount(y_test)}")
-    
     return X_train_scaled, X_val_scaled, X_test_scaled, y_train, y_val, y_test, p33, p67
 
 # ============================================================================
-# PREPARE DATA FOR BOTH TARGETS
+# PREPARE DATA FOR BOTH TARGETS (TIME SERIES SPLIT)
 # ============================================================================
 
 print("\nPreparing data with time series split...")
@@ -110,53 +107,93 @@ X_train_s, X_val_s, X_test_s, y_train_s, y_val_s, y_test_s, p33_s, p67_s = prepa
 X_train_a, X_val_a, X_test_a, y_train_a, y_val_a, y_test_a, p33_a, p67_a = prepare_data_timeseries(df, 'anxiety_level', feature_columns)
 
 # ============================================================================
-# TRAIN BEST MODELS (XGBoost)
+# DEFINE ALL MODELS
 # ============================================================================
 
-print("\nTraining XGBoost models...")
+print("\nInitializing models...")
 
-# Stress model
-stress_model = XGBClassifier(
-    n_estimators=50, max_depth=3, learning_rate=0.05,
-    min_child_weight=5, subsample=0.8, colsample_bytree=0.8,
-    reg_alpha=0.1, reg_lambda=1.0, random_state=42,
-    eval_metric='mlogloss', use_label_encoder=False
-)
-stress_model.fit(X_train_s, y_train_s)
-
-# Anxiety model
-anxiety_model = XGBClassifier(
-    n_estimators=50, max_depth=3, learning_rate=0.05,
-    min_child_weight=5, subsample=0.8, colsample_bytree=0.8,
-    reg_alpha=0.1, reg_lambda=1.0, random_state=42,
-    eval_metric='mlogloss', use_label_encoder=False
-)
-anxiety_model.fit(X_train_a, y_train_a)
+models = {
+    'Logistic Regression': LogisticRegression(
+        multi_class='multinomial',
+        solver='lbfgs',
+        max_iter=1000,
+        random_state=42,
+        C=1.0
+    ),
+    'Random Forest': RandomForestClassifier(
+        n_estimators=100,
+        max_depth=10,
+        min_samples_split=5,
+        min_samples_leaf=2,
+        random_state=42,
+        n_jobs=-1
+    ),
+    'XGBoost': XGBClassifier(
+        n_estimators=50,
+        max_depth=3,
+        learning_rate=0.05,
+        min_child_weight=5,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        reg_alpha=0.1,
+        reg_lambda=1.0,
+        random_state=42,
+        eval_metric='mlogloss',
+        use_label_encoder=False
+    ),
+    'SVM (RBF)': SVC(
+        kernel='rbf',
+        C=1.0,
+        gamma='scale',
+        probability=True,
+        random_state=42
+    ),
+    'Naive Bayes': GaussianNB()
+}
 
 # ============================================================================
-# GENERATE PREDICTIONS AND PROBABILITIES
+# TRAIN ALL MODELS AND COLLECT PREDICTIONS
 # ============================================================================
 
-# Stress predictions
-y_pred_train_s = stress_model.predict(X_train_s)
-y_pred_val_s = stress_model.predict(X_val_s)
-y_pred_test_s = stress_model.predict(X_test_s)
+print("\nTraining all models...")
 
-y_pred_proba_train_s = stress_model.predict_proba(X_train_s)
-y_pred_proba_val_s = stress_model.predict_proba(X_val_s)
-y_pred_proba_test_s = stress_model.predict_proba(X_test_s)
+stress_results = {}
+anxiety_results = {}
 
-# Anxiety predictions
-y_pred_train_a = anxiety_model.predict(X_train_a)
-y_pred_val_a = anxiety_model.predict(X_val_a)
-y_pred_test_a = anxiety_model.predict(X_test_a)
-
-y_pred_proba_train_a = anxiety_model.predict_proba(X_train_a)
-y_pred_proba_val_a = anxiety_model.predict_proba(X_val_a)
-y_pred_proba_test_a = anxiety_model.predict_proba(X_test_a)
+for model_name, model_template in models.items():
+    print(f"\nTraining {model_name}...")
+    
+    # Stress model
+    from sklearn.base import clone
+    stress_model = clone(model_template)
+    stress_model.fit(X_train_s, y_train_s)
+    
+    stress_results[model_name] = {
+        'model': stress_model,
+        'train_pred': stress_model.predict(X_train_s),
+        'val_pred': stress_model.predict(X_val_s),
+        'test_pred': stress_model.predict(X_test_s),
+        'train_proba': stress_model.predict_proba(X_train_s),
+        'val_proba': stress_model.predict_proba(X_val_s),
+        'test_proba': stress_model.predict_proba(X_test_s)
+    }
+    
+    # Anxiety model
+    anxiety_model = clone(model_template)
+    anxiety_model.fit(X_train_a, y_train_a)
+    
+    anxiety_results[model_name] = {
+        'model': anxiety_model,
+        'train_pred': anxiety_model.predict(X_train_a),
+        'val_pred': anxiety_model.predict(X_val_a),
+        'test_pred': anxiety_model.predict(X_test_a),
+        'train_proba': anxiety_model.predict_proba(X_train_a),
+        'val_proba': anxiety_model.predict_proba(X_val_a),
+        'test_proba': anxiety_model.predict_proba(X_test_a)
+    }
 
 # ============================================================================
-# CALCULATE METRICS
+# CALCULATE METRICS FOR ALL MODELS
 # ============================================================================
 
 def calculate_metrics(y_true, y_pred, y_pred_proba):
@@ -186,344 +223,444 @@ def calculate_metrics(y_true, y_pred, y_pred_proba):
     
     return metrics
 
-print("\nCalculating metrics...")
+print("\nCalculating metrics for all models...")
 
-# Stress metrics
-stress_metrics_train = calculate_metrics(y_train_s, y_pred_train_s, y_pred_proba_train_s)
-stress_metrics_val = calculate_metrics(y_val_s, y_pred_val_s, y_pred_proba_val_s)
-stress_metrics_test = calculate_metrics(y_test_s, y_pred_test_s, y_pred_proba_test_s)
+stress_metrics = {}
+anxiety_metrics = {}
 
-# Anxiety metrics
-anxiety_metrics_train = calculate_metrics(y_train_a, y_pred_train_a, y_pred_proba_train_a)
-anxiety_metrics_val = calculate_metrics(y_val_a, y_pred_val_a, y_pred_proba_val_a)
-anxiety_metrics_test = calculate_metrics(y_test_a, y_pred_test_a, y_pred_proba_test_a)
+for model_name in models.keys():
+    stress_metrics[model_name] = {
+        'train': calculate_metrics(y_train_s, stress_results[model_name]['train_pred'], stress_results[model_name]['train_proba']),
+        'val': calculate_metrics(y_val_s, stress_results[model_name]['val_pred'], stress_results[model_name]['val_proba']),
+        'test': calculate_metrics(y_test_s, stress_results[model_name]['test_pred'], stress_results[model_name]['test_proba'])
+    }
+    
+    anxiety_metrics[model_name] = {
+        'train': calculate_metrics(y_train_a, anxiety_results[model_name]['train_pred'], anxiety_results[model_name]['train_proba']),
+        'val': calculate_metrics(y_val_a, anxiety_results[model_name]['val_pred'], anxiety_results[model_name]['val_proba']),
+        'test': calculate_metrics(y_test_a, anxiety_results[model_name]['test_pred'], anxiety_results[model_name]['test_proba'])
+    }
 
 # ============================================================================
-# VISUALIZATION 1: CONFUSION MATRICES
+# VISUALIZATION 1: MODEL COMPARISON - TEST SET PERFORMANCE
 # ============================================================================
 
 print("\nGenerating visualizations...")
 
-fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-fig.suptitle('Confusion Matrices: XGBoost Models (Time Series Split)', fontsize=16, fontweight='bold')
+fig, axes = plt.subplots(1, 2, figsize=(20, 8))
+fig.suptitle('Model Comparison: Test Set Performance (Time Series Split)', fontsize=16, fontweight='bold')
 
-# Stress - Train
-cm_train_s = confusion_matrix(y_train_s, y_pred_train_s)
-sns.heatmap(cm_train_s, annot=True, fmt='d', cmap='Blues', ax=axes[0,0], 
-            xticklabels=['Low', 'Med', 'High'], yticklabels=['Low', 'Med', 'High'])
-axes[0,0].set_title('Stress - Train Set')
-axes[0,0].set_ylabel('True Label')
-axes[0,0].set_xlabel('Predicted Label')
+# Stress comparison
+metric_names = ['Accuracy', 'Precision\n(Macro)', 'Recall\n(Macro)', 'F1\n(Macro)', 'ROC AUC\n(OvR)']
+x = np.arange(len(metric_names))
+width = 0.15
 
-# Stress - Val
-cm_val_s = confusion_matrix(y_val_s, y_pred_val_s)
-sns.heatmap(cm_val_s, annot=True, fmt='d', cmap='Blues', ax=axes[0,1],
-            xticklabels=['Low', 'Med', 'High'], yticklabels=['Low', 'Med', 'High'])
-axes[0,1].set_title('Stress - Validation Set')
-axes[0,1].set_ylabel('True Label')
-axes[0,1].set_xlabel('Predicted Label')
+colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
 
-# Stress - Test
-cm_test_s = confusion_matrix(y_test_s, y_pred_test_s)
-sns.heatmap(cm_test_s, annot=True, fmt='d', cmap='Blues', ax=axes[0,2],
-            xticklabels=['Low', 'Med', 'High'], yticklabels=['Low', 'Med', 'High'])
-axes[0,2].set_title('Stress - Test Set')
-axes[0,2].set_ylabel('True Label')
-axes[0,2].set_xlabel('Predicted Label')
+for i, model_name in enumerate(models.keys()):
+    metrics = stress_metrics[model_name]['test']
+    values = [
+        metrics['accuracy'],
+        metrics['precision_macro'],
+        metrics['recall_macro'],
+        metrics['f1_macro'],
+        metrics['roc_auc_ovr']
+    ]
+    axes[0].bar(x + i*width - 2*width, values, width, label=model_name, color=colors[i], alpha=0.8)
 
-# Anxiety - Train
-cm_train_a = confusion_matrix(y_train_a, y_pred_train_a)
-sns.heatmap(cm_train_a, annot=True, fmt='d', cmap='Greens', ax=axes[1,0],
-            xticklabels=['Low', 'Med', 'High'], yticklabels=['Low', 'Med', 'High'])
-axes[1,0].set_title('Anxiety - Train Set')
-axes[1,0].set_ylabel('True Label')
-axes[1,0].set_xlabel('Predicted Label')
+axes[0].set_ylabel('Score', fontsize=12)
+axes[0].set_title('Stress Prediction - Test Set', fontsize=14, fontweight='bold')
+axes[0].set_xticks(x)
+axes[0].set_xticklabels(metric_names, fontsize=10)
+axes[0].set_ylim([0, 1.1])
+axes[0].legend(loc='lower right', fontsize=9)
+axes[0].grid(axis='y', alpha=0.3)
 
-# Anxiety - Val
-cm_val_a = confusion_matrix(y_val_a, y_pred_val_a)
-sns.heatmap(cm_val_a, annot=True, fmt='d', cmap='Greens', ax=axes[1,1],
-            xticklabels=['Low', 'Med', 'High'], yticklabels=['Low', 'Med', 'High'])
-axes[1,1].set_title('Anxiety - Validation Set')
-axes[1,1].set_ylabel('True Label')
-axes[1,1].set_xlabel('Predicted Label')
+# Anxiety comparison
+for i, model_name in enumerate(models.keys()):
+    metrics = anxiety_metrics[model_name]['test']
+    values = [
+        metrics['accuracy'],
+        metrics['precision_macro'],
+        metrics['recall_macro'],
+        metrics['f1_macro'],
+        metrics['roc_auc_ovr']
+    ]
+    axes[1].bar(x + i*width - 2*width, values, width, label=model_name, color=colors[i], alpha=0.8)
 
-# Anxiety - Test
-cm_test_a = confusion_matrix(y_test_a, y_pred_test_a)
-sns.heatmap(cm_test_a, annot=True, fmt='d', cmap='Greens', ax=axes[1,2],
-            xticklabels=['Low', 'Med', 'High'], yticklabels=['Low', 'Med', 'High'])
-axes[1,2].set_title('Anxiety - Test Set')
-axes[1,2].set_ylabel('True Label')
-axes[1,2].set_xlabel('Predicted Label')
+axes[1].set_ylabel('Score', fontsize=12)
+axes[1].set_title('Anxiety Prediction - Test Set', fontsize=14, fontweight='bold')
+axes[1].set_xticks(x)
+axes[1].set_xticklabels(metric_names, fontsize=10)
+axes[1].set_ylim([0, 1.1])
+axes[1].legend(loc='lower right', fontsize=9)
+axes[1].grid(axis='y', alpha=0.3)
 
 plt.tight_layout()
-plt.savefig(OUTPUT_DIR + 'confusion_matrices.png', dpi=300, bbox_inches='tight')
-print("Saved: confusion_matrices.png")
+plt.savefig(OUTPUT_DIR + 'model_comparison_test.png', dpi=300, bbox_inches='tight')
+print("Saved: model_comparison_test.png")
 
 # ============================================================================
-# VISUALIZATION 2: ROC CURVES
+# VISUALIZATION 2: CONFUSION MATRICES FOR ALL MODELS
 # ============================================================================
 
-fig, axes = plt.subplots(2, 3, figsize=(20, 12))
-fig.suptitle('ROC Curves: One-vs-Rest Multiclass Classification (Time Series Split)', fontsize=16, fontweight='bold')
+fig, axes = plt.subplots(5, 2, figsize=(14, 28))
+fig.suptitle('Confusion Matrices: All Models (Test Set - Time Series Split)', fontsize=16, fontweight='bold')
 
-def plot_roc_curves(y_true, y_pred_proba, ax, title, n_classes=3):
-    """Plot ROC curves for multiclass classification (one-vs-rest)"""
+for i, model_name in enumerate(models.keys()):
+    # Stress
+    cm_stress = confusion_matrix(y_test_s, stress_results[model_name]['test_pred'])
+    sns.heatmap(cm_stress, annot=True, fmt='d', cmap='Blues', ax=axes[i, 0],
+                xticklabels=['Low', 'Med', 'High'], yticklabels=['Low', 'Med', 'High'])
+    axes[i, 0].set_title(f'{model_name} - Stress', fontsize=12, fontweight='bold')
+    axes[i, 0].set_ylabel('True Label')
+    axes[i, 0].set_xlabel('Predicted Label')
+    
+    # Anxiety
+    cm_anxiety = confusion_matrix(y_test_a, anxiety_results[model_name]['test_pred'])
+    sns.heatmap(cm_anxiety, annot=True, fmt='d', cmap='Greens', ax=axes[i, 1],
+                xticklabels=['Low', 'Med', 'High'], yticklabels=['Low', 'Med', 'High'])
+    axes[i, 1].set_title(f'{model_name} - Anxiety', fontsize=12, fontweight='bold')
+    axes[i, 1].set_ylabel('True Label')
+    axes[i, 1].set_xlabel('Predicted Label')
+
+plt.tight_layout()
+plt.savefig(OUTPUT_DIR + 'confusion_matrices_all_models.png', dpi=300, bbox_inches='tight')
+print("Saved: confusion_matrices_all_models.png")
+
+# ============================================================================
+# VISUALIZATION 3: ROC CURVES FOR ALL MODELS
+# ============================================================================
+
+def plot_roc_curves_multimodel(y_true, results_dict, ax, title, n_classes=3):
+    """Plot ROC curves for multiple models"""
     y_true_bin = label_binarize(y_true, classes=[0, 1, 2])
     
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c']
-    class_names = ['Low', 'Medium', 'High']
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
     
-    for i in range(n_classes):
-        fpr, tpr, _ = roc_curve(y_true_bin[:, i], y_pred_proba[:, i])
-        roc_auc = auc(fpr, tpr)
-        ax.plot(fpr, tpr, color=colors[i], lw=2, 
-                label=f'{class_names[i]} (AUC = {roc_auc:.3f})')
+    for i, (model_name, color) in enumerate(zip(results_dict.keys(), colors)):
+        y_pred_proba = results_dict[model_name]['test_proba']
+        
+        # Calculate micro-average ROC curve and ROC area
+        fpr_micro, tpr_micro, _ = roc_curve(y_true_bin.ravel(), y_pred_proba.ravel())
+        roc_auc_micro = auc(fpr_micro, tpr_micro)
+        
+        ax.plot(fpr_micro, tpr_micro, color=color, lw=2,
+                label=f'{model_name} (AUC = {roc_auc_micro:.3f})')
     
     ax.plot([0, 1], [0, 1], 'k--', lw=2, label='Random Classifier')
     ax.set_xlim([0.0, 1.0])
     ax.set_ylim([0.0, 1.05])
-    ax.set_xlabel('False Positive Rate', fontsize=11)
-    ax.set_ylabel('True Positive Rate', fontsize=11)
-    ax.set_title(title, fontsize=12, fontweight='bold')
-    ax.legend(loc="lower right", fontsize=9)
+    ax.set_xlabel('False Positive Rate', fontsize=12)
+    ax.set_ylabel('True Positive Rate', fontsize=12)
+    ax.set_title(title, fontsize=14, fontweight='bold')
+    ax.legend(loc="lower right", fontsize=10)
     ax.grid(alpha=0.3)
 
-# Stress ROC curves
-plot_roc_curves(y_train_s, y_pred_proba_train_s, axes[0,0], 'Stress - Train Set')
-plot_roc_curves(y_val_s, y_pred_proba_val_s, axes[0,1], 'Stress - Validation Set')
-plot_roc_curves(y_test_s, y_pred_proba_test_s, axes[0,2], 'Stress - Test Set')
-
-# Anxiety ROC curves
-plot_roc_curves(y_train_a, y_pred_proba_train_a, axes[1,0], 'Anxiety - Train Set')
-plot_roc_curves(y_val_a, y_pred_proba_val_a, axes[1,1], 'Anxiety - Validation Set')
-plot_roc_curves(y_test_a, y_pred_proba_test_a, axes[1,2], 'Anxiety - Test Set')
-
-plt.tight_layout()
-plt.savefig(OUTPUT_DIR + 'roc_curves.png', dpi=300, bbox_inches='tight')
-print("Saved: roc_curves.png")
-
-# ============================================================================
-# VISUALIZATION 3: FEATURE IMPORTANCE
-# ============================================================================
-
 fig, axes = plt.subplots(1, 2, figsize=(20, 8))
+fig.suptitle('ROC Curves: All Models (Test Set, Micro-Average - Time Series Split)', fontsize=16, fontweight='bold')
 
-# Stress feature importance
-stress_importance = pd.DataFrame({
-    'feature': feature_columns,
-    'importance': stress_model.feature_importances_
-}).sort_values('importance', ascending=True).tail(15)
-
-axes[0].barh(stress_importance['feature'], stress_importance['importance'], color='steelblue')
-axes[0].set_xlabel('Importance', fontsize=12)
-axes[0].set_title('Top 15 Features - Stress Prediction', fontsize=14, fontweight='bold')
-axes[0].grid(axis='x', alpha=0.3)
-
-# Anxiety feature importance
-anxiety_importance = pd.DataFrame({
-    'feature': feature_columns,
-    'importance': anxiety_model.feature_importances_
-}).sort_values('importance', ascending=True).tail(15)
-
-axes[1].barh(anxiety_importance['feature'], anxiety_importance['importance'], color='seagreen')
-axes[1].set_xlabel('Importance', fontsize=12)
-axes[1].set_title('Top 15 Features - Anxiety Prediction', fontsize=14, fontweight='bold')
-axes[1].grid(axis='x', alpha=0.3)
+plot_roc_curves_multimodel(y_test_s, stress_results, axes[0], 'Stress Prediction')
+plot_roc_curves_multimodel(y_test_a, anxiety_results, axes[1], 'Anxiety Prediction')
 
 plt.tight_layout()
-plt.savefig(OUTPUT_DIR + 'feature_importance.png', dpi=300, bbox_inches='tight')
-print("Saved: feature_importance.png")
+plt.savefig(OUTPUT_DIR + 'roc_curves_all_models.png', dpi=300, bbox_inches='tight')
+print("Saved: roc_curves_all_models.png")
 
 # ============================================================================
-# VISUALIZATION 4: COMPREHENSIVE METRICS COMPARISON
+# VISUALIZATION 4: GENERALIZATION ANALYSIS (TRAIN VS TEST)
+# ============================================================================
+
+fig, axes = plt.subplots(1, 2, figsize=(18, 7))
+fig.suptitle('Generalization Analysis: Train vs Test Accuracy (Time Series Split)', fontsize=16, fontweight='bold')
+
+model_names_list = list(models.keys())
+
+# Stress
+stress_train_acc = [stress_metrics[m]['train']['accuracy'] for m in model_names_list]
+stress_test_acc = [stress_metrics[m]['test']['accuracy'] for m in model_names_list]
+
+x_pos = np.arange(len(model_names_list))
+width = 0.35
+
+axes[0].bar(x_pos - width/2, stress_train_acc, width, label='Train', color='#1f77b4', alpha=0.7)
+axes[0].bar(x_pos + width/2, stress_test_acc, width, label='Test', color='#2ca02c', alpha=0.7)
+axes[0].set_ylabel('Accuracy', fontsize=12)
+axes[0].set_title('Stress Prediction', fontsize=14, fontweight='bold')
+axes[0].set_xticks(x_pos)
+axes[0].set_xticklabels(model_names_list, rotation=15, ha='right', fontsize=10)
+axes[0].set_ylim([0, 1.1])
+axes[0].legend(fontsize=11)
+axes[0].grid(axis='y', alpha=0.3)
+
+# Add gap annotations
+for i, (train_acc, test_acc) in enumerate(zip(stress_train_acc, stress_test_acc)):
+    gap = train_acc - test_acc
+    axes[0].text(i, max(train_acc, test_acc) + 0.02, f'Δ={gap:.3f}', 
+                ha='center', fontsize=9, fontweight='bold')
+
+# Anxiety
+anxiety_train_acc = [anxiety_metrics[m]['train']['accuracy'] for m in model_names_list]
+anxiety_test_acc = [anxiety_metrics[m]['test']['accuracy'] for m in model_names_list]
+
+axes[1].bar(x_pos - width/2, anxiety_train_acc, width, label='Train', color='#1f77b4', alpha=0.7)
+axes[1].bar(x_pos + width/2, anxiety_test_acc, width, label='Test', color='#2ca02c', alpha=0.7)
+axes[1].set_ylabel('Accuracy', fontsize=12)
+axes[1].set_title('Anxiety Prediction', fontsize=14, fontweight='bold')
+axes[1].set_xticks(x_pos)
+axes[1].set_xticklabels(model_names_list, rotation=15, ha='right', fontsize=10)
+axes[1].set_ylim([0, 1.1])
+axes[1].legend(fontsize=11)
+axes[1].grid(axis='y', alpha=0.3)
+
+# Add gap annotations
+for i, (train_acc, test_acc) in enumerate(zip(anxiety_train_acc, anxiety_test_acc)):
+    gap = train_acc - test_acc
+    axes[1].text(i, max(train_acc, test_acc) + 0.02, f'Δ={gap:.3f}', 
+                ha='center', fontsize=9, fontweight='bold')
+
+plt.tight_layout()
+plt.savefig(OUTPUT_DIR + 'generalization_analysis.png', dpi=300, bbox_inches='tight')
+print("Saved: generalization_analysis.png")
+
+# ============================================================================
+# VISUALIZATION 5: TRAIN/VAL/TEST PERFORMANCE ACROSS ALL SPLITS
 # ============================================================================
 
 fig, axes = plt.subplots(2, 2, figsize=(18, 12))
-fig.suptitle('Comprehensive Performance Metrics (Time Series Split)', fontsize=16, fontweight='bold')
+fig.suptitle('Performance Across Train/Val/Test Splits (Time Series)', fontsize=16, fontweight='bold')
 
-# Stress - Multiple metrics across datasets
-metric_names = ['Accuracy', 'Precision\n(Macro)', 'Recall\n(Macro)', 'F1\n(Macro)', 'ROC AUC\n(OvR)']
-stress_train_vals = [stress_metrics_train['accuracy'], stress_metrics_train['precision_macro'], 
-                     stress_metrics_train['recall_macro'], stress_metrics_train['f1_macro'],
-                     stress_metrics_train['roc_auc_ovr']]
-stress_val_vals = [stress_metrics_val['accuracy'], stress_metrics_val['precision_macro'], 
-                   stress_metrics_val['recall_macro'], stress_metrics_val['f1_macro'],
-                   stress_metrics_val['roc_auc_ovr']]
-stress_test_vals = [stress_metrics_test['accuracy'], stress_metrics_test['precision_macro'], 
-                    stress_metrics_test['recall_macro'], stress_metrics_test['f1_macro'],
-                    stress_metrics_test['roc_auc_ovr']]
+# Stress - Accuracy across splits
+for model_name in models.keys():
+    train_acc = stress_metrics[model_name]['train']['accuracy']
+    val_acc = stress_metrics[model_name]['val']['accuracy']
+    test_acc = stress_metrics[model_name]['test']['accuracy']
+    axes[0, 0].plot(['Train', 'Val', 'Test'], [train_acc, val_acc, test_acc], 
+                    marker='o', linewidth=2, markersize=8, label=model_name)
 
-x = np.arange(len(metric_names))
-width = 0.25
+axes[0, 0].set_ylabel('Accuracy', fontsize=12)
+axes[0, 0].set_title('Stress - Accuracy Across Splits', fontsize=13, fontweight='bold')
+axes[0, 0].legend(loc='best', fontsize=9)
+axes[0, 0].grid(alpha=0.3)
+axes[0, 0].set_ylim([0, 1.1])
 
-axes[0,0].bar(x - width, stress_train_vals, width, label='Train', color='#1f77b4', alpha=0.8)
-axes[0,0].bar(x, stress_val_vals, width, label='Validation', color='#ff7f0e', alpha=0.8)
-axes[0,0].bar(x + width, stress_test_vals, width, label='Test', color='#2ca02c', alpha=0.8)
-axes[0,0].set_ylabel('Score', fontsize=12)
-axes[0,0].set_title('Stress - Metrics Across Datasets', fontsize=14, fontweight='bold')
-axes[0,0].set_xticks(x)
-axes[0,0].set_xticklabels(metric_names, fontsize=10)
-axes[0,0].set_ylim([0, 1.1])
-axes[0,0].legend()
-axes[0,0].grid(axis='y', alpha=0.3)
+# Stress - F1 Macro across splits
+for model_name in models.keys():
+    train_f1 = stress_metrics[model_name]['train']['f1_macro']
+    val_f1 = stress_metrics[model_name]['val']['f1_macro']
+    test_f1 = stress_metrics[model_name]['test']['f1_macro']
+    axes[0, 1].plot(['Train', 'Val', 'Test'], [train_f1, val_f1, test_f1], 
+                    marker='o', linewidth=2, markersize=8, label=model_name)
 
-# Anxiety - Multiple metrics across datasets
-anxiety_train_vals = [anxiety_metrics_train['accuracy'], anxiety_metrics_train['precision_macro'], 
-                      anxiety_metrics_train['recall_macro'], anxiety_metrics_train['f1_macro'],
-                      anxiety_metrics_train['roc_auc_ovr']]
-anxiety_val_vals = [anxiety_metrics_val['accuracy'], anxiety_metrics_val['precision_macro'], 
-                    anxiety_metrics_val['recall_macro'], anxiety_metrics_val['f1_macro'],
-                    anxiety_metrics_val['roc_auc_ovr']]
-anxiety_test_vals = [anxiety_metrics_test['accuracy'], anxiety_metrics_test['precision_macro'], 
-                     anxiety_metrics_test['recall_macro'], anxiety_metrics_test['f1_macro'],
-                     anxiety_metrics_test['roc_auc_ovr']]
+axes[0, 1].set_ylabel('F1 Score (Macro)', fontsize=12)
+axes[0, 1].set_title('Stress - F1 Score Across Splits', fontsize=13, fontweight='bold')
+axes[0, 1].legend(loc='best', fontsize=9)
+axes[0, 1].grid(alpha=0.3)
+axes[0, 1].set_ylim([0, 1.1])
 
-axes[0,1].bar(x - width, anxiety_train_vals, width, label='Train', color='#1f77b4', alpha=0.8)
-axes[0,1].bar(x, anxiety_val_vals, width, label='Validation', color='#ff7f0e', alpha=0.8)
-axes[0,1].bar(x + width, anxiety_test_vals, width, label='Test', color='#2ca02c', alpha=0.8)
-axes[0,1].set_ylabel('Score', fontsize=12)
-axes[0,1].set_title('Anxiety - Metrics Across Datasets', fontsize=14, fontweight='bold')
-axes[0,1].set_xticks(x)
-axes[0,1].set_xticklabels(metric_names, fontsize=10)
-axes[0,1].set_ylim([0, 1.1])
-axes[0,1].legend()
-axes[0,1].grid(axis='y', alpha=0.3)
+# Anxiety - Accuracy across splits
+for model_name in models.keys():
+    train_acc = anxiety_metrics[model_name]['train']['accuracy']
+    val_acc = anxiety_metrics[model_name]['val']['accuracy']
+    test_acc = anxiety_metrics[model_name]['test']['accuracy']
+    axes[1, 0].plot(['Train', 'Val', 'Test'], [train_acc, val_acc, test_acc], 
+                    marker='o', linewidth=2, markersize=8, label=model_name)
 
-# Stress - Per-class accuracy (test set)
-stress_per_class = cm_test_s.diagonal() / cm_test_s.sum(axis=1)
-classes = ['Low\n(0-33%)', 'Medium\n(33-67%)', 'High\n(67-100%)']
-axes[1,0].bar(classes, stress_per_class, color=['#90EE90', '#FFD700', '#FF6B6B'], alpha=0.7)
-axes[1,0].set_ylabel('Accuracy', fontsize=12)
-axes[1,0].set_title('Stress - Per-Class Accuracy (Test Set)', fontsize=14, fontweight='bold')
-axes[1,0].set_ylim([0, 1])
-axes[1,0].grid(axis='y', alpha=0.3)
-for i, v in enumerate(stress_per_class):
-    axes[1,0].text(i, v + 0.02, f'{v:.3f}', ha='center', fontsize=11, fontweight='bold')
+axes[1, 0].set_ylabel('Accuracy', fontsize=12)
+axes[1, 0].set_title('Anxiety - Accuracy Across Splits', fontsize=13, fontweight='bold')
+axes[1, 0].legend(loc='best', fontsize=9)
+axes[1, 0].grid(alpha=0.3)
+axes[1, 0].set_ylim([0, 1.1])
 
-# Anxiety - Per-class accuracy (test set)
-anxiety_per_class = cm_test_a.diagonal() / cm_test_a.sum(axis=1)
-axes[1,1].bar(classes, anxiety_per_class, color=['#90EE90', '#FFD700', '#FF6B6B'], alpha=0.7)
-axes[1,1].set_ylabel('Accuracy', fontsize=12)
-axes[1,1].set_title('Anxiety - Per-Class Accuracy (Test Set)', fontsize=14, fontweight='bold')
-axes[1,1].set_ylim([0, 1])
-axes[1,1].grid(axis='y', alpha=0.3)
-for i, v in enumerate(anxiety_per_class):
-    axes[1,1].text(i, v + 0.02, f'{v:.3f}', ha='center', fontsize=11, fontweight='bold')
+# Anxiety - F1 Macro across splits
+for model_name in models.keys():
+    train_f1 = anxiety_metrics[model_name]['train']['f1_macro']
+    val_f1 = anxiety_metrics[model_name]['val']['f1_macro']
+    test_f1 = anxiety_metrics[model_name]['test']['f1_macro']
+    axes[1, 1].plot(['Train', 'Val', 'Test'], [train_f1, val_f1, test_f1], 
+                    marker='o', linewidth=2, markersize=8, label=model_name)
+
+axes[1, 1].set_ylabel('F1 Score (Macro)', fontsize=12)
+axes[1, 1].set_title('Anxiety - F1 Score Across Splits', fontsize=13, fontweight='bold')
+axes[1, 1].legend(loc='best', fontsize=9)
+axes[1, 1].grid(alpha=0.3)
+axes[1, 1].set_ylim([0, 1.1])
 
 plt.tight_layout()
-plt.savefig(OUTPUT_DIR + 'comprehensive_metrics.png', dpi=300, bbox_inches='tight')
-print("Saved: comprehensive_metrics.png")
+plt.savefig(OUTPUT_DIR + 'performance_across_splits.png', dpi=300, bbox_inches='tight')
+print("Saved: performance_across_splits.png")
+
+# ============================================================================
+# VISUALIZATION 6: FEATURE IMPORTANCE COMPARISON (for tree-based models)
+# ============================================================================
+
+fig, axes = plt.subplots(1, 2, figsize=(20, 8))
+fig.suptitle('Feature Importance: Tree-Based Models (Time Series Split)', fontsize=16, fontweight='bold')
+
+tree_models = ['Random Forest', 'XGBoost']
+
+# Stress feature importance
+for model_name in tree_models:
+    if hasattr(stress_results[model_name]['model'], 'feature_importances_'):
+        importance = pd.DataFrame({
+            'feature': feature_columns,
+            'importance': stress_results[model_name]['model'].feature_importances_
+        }).sort_values('importance', ascending=True).tail(10)
+        
+        axes[0].barh(np.arange(len(importance)) + (0.4 if model_name == 'XGBoost' else 0), 
+                    importance['importance'], 
+                    height=0.35,
+                    label=model_name,
+                    alpha=0.8)
+
+axes[0].set_yticks(np.arange(len(importance)) + 0.2)
+axes[0].set_yticklabels(importance['feature'])
+axes[0].set_xlabel('Importance', fontsize=12)
+axes[0].set_title('Stress Prediction - Top 10 Features', fontsize=14, fontweight='bold')
+axes[0].legend()
+axes[0].grid(axis='x', alpha=0.3)
+
+# Anxiety feature importance
+for model_name in tree_models:
+    if hasattr(anxiety_results[model_name]['model'], 'feature_importances_'):
+        importance = pd.DataFrame({
+            'feature': feature_columns,
+            'importance': anxiety_results[model_name]['model'].feature_importances_
+        }).sort_values('importance', ascending=True).tail(10)
+        
+        axes[1].barh(np.arange(len(importance)) + (0.4 if model_name == 'XGBoost' else 0), 
+                    importance['importance'], 
+                    height=0.35,
+                    label=model_name,
+                    alpha=0.8)
+
+axes[1].set_yticks(np.arange(len(importance)) + 0.2)
+axes[1].set_yticklabels(importance['feature'])
+axes[1].set_xlabel('Importance', fontsize=12)
+axes[1].set_title('Anxiety Prediction - Top 10 Features', fontsize=14, fontweight='bold')
+axes[1].legend()
+axes[1].grid(axis='x', alpha=0.3)
+
+plt.tight_layout()
+plt.savefig(OUTPUT_DIR + 'feature_importance_comparison.png', dpi=300, bbox_inches='tight')
+print("Saved: feature_importance_comparison.png")
+
+# ============================================================================
+# SAVE ALL METRICS TO CSV
+# ============================================================================
+
+print("\nSaving metrics to CSV...")
+
+all_metrics_data = []
+
+for model_name in models.keys():
+    for target_type, metrics_dict in [('Stress', stress_metrics[model_name]), 
+                                       ('Anxiety', anxiety_metrics[model_name])]:
+        for dataset in ['train', 'val', 'test']:
+            metrics = metrics_dict[dataset]
+            row = {
+                'Model': model_name,
+                'Target': target_type,
+                'Dataset': dataset.capitalize(),
+                'Accuracy': metrics['accuracy'],
+                'Precision_Macro': metrics['precision_macro'],
+                'Precision_Weighted': metrics['precision_weighted'],
+                'Recall_Macro': metrics['recall_macro'],
+                'Recall_Weighted': metrics['recall_weighted'],
+                'F1_Macro': metrics['f1_macro'],
+                'F1_Weighted': metrics['f1_weighted'],
+                'ROC_AUC_OvR_Macro': metrics['roc_auc_ovr'],
+                'ROC_AUC_OvR_Weighted': metrics['roc_auc_ovr_weighted']
+            }
+            all_metrics_data.append(row)
+
+metrics_df = pd.DataFrame(all_metrics_data)
+metrics_df.to_csv(OUTPUT_DIR + 'all_models_metrics_timeseries.csv', index=False)
+print("Saved: all_models_metrics_timeseries.csv")
 
 # ============================================================================
 # DETAILED ANALYSIS REPORT
 # ============================================================================
 
 print("\n" + "="*80)
-print("DETAILED ANALYSIS REPORT - TIME SERIES SPLIT")
+print("DETAILED ANALYSIS REPORT (TIME SERIES SPLIT)")
 print("="*80)
 
-def print_metrics_table(metrics_dict, dataset_name):
-    """Print metrics in a formatted table"""
-    print(f"\n{dataset_name} Set Metrics:")
-    print(f"  Accuracy:              {metrics_dict['accuracy']:.4f} ({metrics_dict['accuracy']*100:.2f}%)")
-    print(f"  Precision (Macro):     {metrics_dict['precision_macro']:.4f}")
-    print(f"  Precision (Weighted):  {metrics_dict['precision_weighted']:.4f}")
-    print(f"  Recall (Macro):        {metrics_dict['recall_macro']:.4f}")
-    print(f"  Recall (Weighted):     {metrics_dict['recall_weighted']:.4f}")
-    print(f"  F1 Score (Macro):      {metrics_dict['f1_macro']:.4f}")
-    print(f"  F1 Score (Weighted):   {metrics_dict['f1_weighted']:.4f}")
-    if not np.isnan(metrics_dict['roc_auc_ovr']):
-        print(f"  ROC AUC (OvR Macro):   {metrics_dict['roc_auc_ovr']:.4f}")
-        print(f"  ROC AUC (OvR Weighted):{metrics_dict['roc_auc_ovr_weighted']:.4f}")
+for target_name, metrics_collection in [('STRESS', stress_metrics), ('ANXIETY', anxiety_metrics)]:
+    print(f"\n{'='*80}")
+    print(f"{target_name} PREDICTION - ALL MODELS COMPARISON")
+    print('='*80)
+    
+    for model_name in models.keys():
+        print(f"\n{'-'*80}")
+        print(f"{model_name}")
+        print('-'*80)
+        
+        for dataset in ['train', 'val', 'test']:
+            metrics = metrics_collection[model_name][dataset]
+            print(f"\n{dataset.capitalize()} Set:")
+            print(f"  Accuracy:          {metrics['accuracy']:.4f} ({metrics['accuracy']*100:.2f}%)")
+            print(f"  Precision (Macro): {metrics['precision_macro']:.4f}")
+            print(f"  Recall (Macro):    {metrics['recall_macro']:.4f}")
+            print(f"  F1 Score (Macro):  {metrics['f1_macro']:.4f}")
+            if not np.isnan(metrics['roc_auc_ovr']):
+                print(f"  ROC AUC (OvR):     {metrics['roc_auc_ovr']:.4f}")
+        
+        # Generalization gap
+        train_acc = metrics_collection[model_name]['train']['accuracy']
+        test_acc = metrics_collection[model_name]['test']['accuracy']
+        gap = train_acc - test_acc
+        print(f"\nGeneralization Gap (Train-Test): {gap:.4f}")
+        print(f"Overfitting Status: {'Minimal' if gap < 0.05 else 'Acceptable' if gap < 0.15 else 'Significant'}")
+        
+        # Temporal stability (train-val-test degradation)
+        val_acc = metrics_collection[model_name]['val']['accuracy']
+        train_val_drop = train_acc - val_acc
+        val_test_drop = val_acc - test_acc
+        print(f"\nTemporal Performance:")
+        print(f"  Train→Val Drop:    {train_val_drop:.4f}")
+        print(f"  Val→Test Drop:     {val_test_drop:.4f}")
+        print(f"  Stability:         {'Good' if abs(train_val_drop - val_test_drop) < 0.05 else 'Moderate' if abs(train_val_drop - val_test_drop) < 0.10 else 'Poor'}")
 
-print("\n" + "-"*80)
-print("STRESS PREDICTION - XGBoost (Regularized)")
-print("-"*80)
+print("\n" + "="*80)
+print("BEST MODELS SUMMARY (TIME SERIES SPLIT)")
+print("="*80)
 
-print_metrics_table(stress_metrics_train, "Train")
-print_metrics_table(stress_metrics_val, "Validation")
-print_metrics_table(stress_metrics_test, "Test")
+# Find best models
+print("\nBest Test Set Performance:")
+print("\nStress Prediction:")
+best_stress = max(stress_metrics.items(), key=lambda x: x[1]['test']['accuracy'])
+print(f"  Best Model: {best_stress[0]}")
+print(f"  Test Accuracy: {best_stress[1]['test']['accuracy']:.4f} ({best_stress[1]['test']['accuracy']*100:.2f}%)")
+print(f"  Test F1 (Macro): {best_stress[1]['test']['f1_macro']:.4f}")
+print(f"  Val Accuracy: {best_stress[1]['val']['accuracy']:.4f} ({best_stress[1]['val']['accuracy']*100:.2f}%)")
 
-print(f"\nPer-Class Performance (Test Set):")
-print(f"  Low Class Accuracy:    {stress_per_class[0]:.4f} ({stress_per_class[0]*100:.2f}%)")
-print(f"  Medium Class Accuracy: {stress_per_class[1]:.4f} ({stress_per_class[1]*100:.2f}%)")
-print(f"  High Class Accuracy:   {stress_per_class[2]:.4f} ({stress_per_class[2]*100:.2f}%)")
+print("\nAnxiety Prediction:")
+best_anxiety = max(anxiety_metrics.items(), key=lambda x: x[1]['test']['accuracy'])
+print(f"  Best Model: {best_anxiety[0]}")
+print(f"  Test Accuracy: {best_anxiety[1]['test']['accuracy']:.4f} ({best_anxiety[1]['test']['accuracy']*100:.2f}%)")
+print(f"  Test F1 (Macro): {best_anxiety[1]['test']['f1_macro']:.4f}")
+print(f"  Val Accuracy: {best_anxiety[1]['val']['accuracy']:.4f} ({best_anxiety[1]['val']['accuracy']*100:.2f}%)")
 
-print(f"\nGeneralization Analysis:")
-train_test_gap_s = stress_metrics_train['accuracy'] - stress_metrics_test['accuracy']
-print(f"  Train-Test Gap:        {train_test_gap_s:.4f}")
-print(f"  Overfitting Status:    {'Acceptable' if train_test_gap_s < 0.2 else 'Significant'}")
-
-print("\n" + "-"*80)
-print("ANXIETY PREDICTION - XGBoost (Regularized)")
-print("-"*80)
-
-print_metrics_table(anxiety_metrics_train, "Train")
-print_metrics_table(anxiety_metrics_val, "Validation")
-print_metrics_table(anxiety_metrics_test, "Test")
-
-print(f"\nPer-Class Performance (Test Set):")
-print(f"  Low Class Accuracy:    {anxiety_per_class[0]:.4f} ({anxiety_per_class[0]*100:.2f}%)")
-print(f"  Medium Class Accuracy: {anxiety_per_class[1]:.4f} ({anxiety_per_class[1]*100:.2f}%)")
-print(f"  High Class Accuracy:   {anxiety_per_class[2]:.4f} ({anxiety_per_class[2]*100:.2f}%)")
-
-print(f"\nGeneralization Analysis:")
-train_test_gap_a = anxiety_metrics_train['accuracy'] - anxiety_metrics_test['accuracy']
-print(f"  Train-Test Gap:        {train_test_gap_a:.4f}")
-print(f"  Overfitting Status:    {'Acceptable' if train_test_gap_a < 0.2 else 'Significant'}")
-
-print("\n" + "-"*80)
-print("TOP 5 MOST IMPORTANT FEATURES")
-print("-"*80)
-print("\nFor Stress Prediction:")
-for idx, row in stress_importance.tail(5).iloc[::-1].iterrows():
-    print(f"  {row['feature']}: {row['importance']:.4f}")
-
-print("\nFor Anxiety Prediction:")
-for idx, row in anxiety_importance.tail(5).iloc[::-1].iterrows():
-    print(f"  {row['feature']}: {row['importance']:.4f}")
-
-# ============================================================================
-# SAVE METRICS TO CSV
-# ============================================================================
-
-print("\n" + "-"*80)
-print("SAVING METRICS TO CSV")
-print("-"*80)
-
-# Create comprehensive metrics dataframe
-metrics_data = []
-
-for model_name, metrics_list in [('Stress', [stress_metrics_train, stress_metrics_val, stress_metrics_test]),
-                                  ('Anxiety', [anxiety_metrics_train, anxiety_metrics_val, anxiety_metrics_test])]:
-    for dataset, metrics in zip(['Train', 'Validation', 'Test'], metrics_list):
-        row = {
-            'Model': model_name,
-            'Dataset': dataset,
-            'Accuracy': metrics['accuracy'],
-            'Precision_Macro': metrics['precision_macro'],
-            'Precision_Weighted': metrics['precision_weighted'],
-            'Recall_Macro': metrics['recall_macro'],
-            'Recall_Weighted': metrics['recall_weighted'],
-            'F1_Macro': metrics['f1_macro'],
-            'F1_Weighted': metrics['f1_weighted'],
-            'ROC_AUC_OvR_Macro': metrics['roc_auc_ovr'],
-            'ROC_AUC_OvR_Weighted': metrics['roc_auc_ovr_weighted']
-        }
-        metrics_data.append(row)
-
-metrics_df = pd.DataFrame(metrics_data)
-metrics_df.to_csv(OUTPUT_DIR + 'model_metrics.csv', index=False)
-print(f"Saved: model_metrics.csv")
+print("\n" + "="*80)
+print("TIME SERIES CONSIDERATIONS")
+print("="*80)
+print("\nKey Observations:")
+print("  - Sequential split respects temporal order (no data leakage)")
+print("  - Test set represents future unseen data")
+print("  - Validation set can guide early stopping decisions")
+print("  - Performance drops from train→val→test indicate temporal drift")
+print("  - Models with stable performance across splits generalize better to future data")
 
 print("\n" + "="*80)
 print("ANALYSIS COMPLETE")
 print("="*80)
 print(f"\nAll visualizations and metrics saved to: {OUTPUT_DIR}")
-print("Files created:")
-print("  - confusion_matrices.png")
-print("  - roc_curves.png")
-print("  - feature_importance.png")
-print("  - comprehensive_metrics.png")
-print("  - model_metrics.csv")
-print("\nNote: Time series split (70-15-15) preserves temporal order - no shuffling applied")
+print("\nFiles created:")
+print("  - model_comparison_test.png")
+print("  - confusion_matrices_all_models.png")
+print("  - roc_curves_all_models.png")
+print("  - generalization_analysis.png")
+print("  - performance_across_splits.png")
+print("  - feature_importance_comparison.png")
+print("  - all_models_metrics_timeseries.csv")

@@ -277,6 +277,17 @@ for ml_file in ml_files:
         final_cols = metadata_cols + new_feature_cols + other_cols
         df = df[final_cols]
         
+        # ── Drop columns with <50% completeness ──
+        completeness = df.notna().mean()
+        low_completeness_cols = completeness[completeness < 0.50].index.tolist()
+        if low_completeness_cols:
+            print(f"  ✗ Dropping {len(low_completeness_cols)} columns with <50% completeness:")
+            for col in low_completeness_cols:
+                print(f"      {col:40s} {completeness[col]*100:5.1f}%")
+            df = df.drop(columns=low_completeness_cols)
+        else:
+            print(f"  ✓ All columns have ≥50% completeness")
+
         # Save enriched dataset
         output_file = os.path.join(output_dir, os.path.basename(ml_file).replace('.csv', '_enriched.csv'))
         df.to_csv(output_file, index=False)
@@ -296,88 +307,7 @@ for ml_file in ml_files:
         import traceback
         traceback.print_exc()
 
-# ==============================================================================
-# STEP 3: CREATE SUMMARY REPORTS
-# ==============================================================================
 
-print("\n" + "="*70)
-print("Step 3: Creating summary reports...")
-print("="*70)
-
-# Load one of the enriched datasets for analysis
-main_enriched_file = os.path.join(output_dir, "ml_ready_combined_windows_enriched.csv")
-
-if os.path.exists(main_enriched_file):
-    df_summary = pd.read_csv(main_enriched_file)
-    
-    # Summary by university
-    print("\nSummary by University:")
-    uni_summary = df_summary.groupby('university').agg({
-        'userid': 'nunique',
-        'response_timestamp': 'count',
-        'daily_total_steps': lambda x: x.notna().sum(),
-        'is_exam_period': 'sum',
-        'is_easter_break': 'sum'
-    }).rename(columns={
-        'userid': 'unique_users',
-        'response_timestamp': 'total_responses',
-        'daily_total_steps': 'responses_with_steps',
-        'is_exam_period': 'exam_period_responses',
-        'is_easter_break': 'easter_break_responses'
-    })
-    
-    print(uni_summary)
-    
-    uni_summary_file = os.path.join(output_dir, "summary_by_university.csv")
-    uni_summary.to_csv(uni_summary_file)
-    print(f"\n✓ Saved: {uni_summary_file}")
-    
-    # Summary by course
-    print("\nSummary by Course:")
-    course_summary = df_summary.groupby('course').agg({
-        'userid': 'nunique',
-        'response_timestamp': 'count',
-        'daily_total_steps': lambda x: x.notna().sum(),
-        'is_exam_period': 'sum'
-    }).rename(columns={
-        'userid': 'unique_users',
-        'response_timestamp': 'total_responses',
-        'daily_total_steps': 'responses_with_steps',
-        'is_exam_period': 'exam_period_responses'
-    })
-    
-    print(course_summary)
-    
-    course_summary_file = os.path.join(output_dir, "summary_by_course.csv")
-    course_summary.to_csv(course_summary_file)
-    print(f"\n✓ Saved: {course_summary_file}")
-    
-    # Exam period analysis
-    print("\nExam Period Analysis:")
-    exam_analysis = pd.DataFrame({
-        'Period': ['Exam Period', 'Pre-Exam Week (1-7 days before)', 'Easter Break', 'Regular Period'],
-        'Response Count': [
-            df_summary['is_exam_period'].sum(),
-            df_summary['is_pre_exam_week'].sum(),
-            df_summary['is_easter_break'].sum(),
-            len(df_summary) - df_summary['is_exam_period'].sum() - 
-            df_summary['is_pre_exam_week'].sum() - df_summary['is_easter_break'].sum()
-        ],
-        'Percentage': [
-            df_summary['is_exam_period'].mean() * 100,
-            df_summary['is_pre_exam_week'].mean() * 100,
-            df_summary['is_easter_break'].mean() * 100,
-            (1 - df_summary['is_exam_period'].mean() - 
-             df_summary['is_pre_exam_week'].mean() - 
-             df_summary['is_easter_break'].mean()) * 100
-        ]
-    })
-    
-    print(exam_analysis)
-    
-    exam_analysis_file = os.path.join(output_dir, "exam_period_analysis.csv")
-    exam_analysis.to_csv(exam_analysis_file, index=False)
-    print(f"\n✓ Saved: {exam_analysis_file}")
 
 # ==============================================================================
 # FINAL SUMMARY
@@ -388,27 +318,6 @@ print("✓ ENRICHMENT COMPLETE!")
 print("="*70)
 
 print(f"\nProcessed {processed_count} ML datasets")
-print(f"\nNew features added:")
-print("  1. daily_total_steps - Total steps taken on that day")
-print("  2. university - University identifier (1 or 2)")
-print("  3. course - Course identifier (A1, A2, B, C)")
-print("  4. is_exam_period - Binary indicator for exam weeks")
-print("  5. is_easter_break - Binary indicator for Easter break (relaxed period)")
-print("  6. days_until_exam - Number of days until next exam (-1 if no upcoming exam)")
-print("  7. is_pre_exam_week - Binary indicator for 1-7 days before exam")
 
 print(f"\nAll enriched files saved to: {output_dir}")
 
-print("\nKey files:")
-print("  • ml_ready_combined_windows_enriched.csv - Main dataset with all features")
-print("  • ml_heart_rate_focused_enriched.csv - Heart rate only (if exists)")
-print("  • summary_by_university.csv - Statistics by university")
-print("  • summary_by_course.csv - Statistics by course")
-print("  • exam_period_analysis.csv - Breakdown of exam vs regular periods")
-
-print("\nML Considerations:")
-print("  • Use 'is_exam_period' to analyze stress differences during exams")
-print("  • Use 'is_easter_break' as a control period (expected lower stress)")
-print("  • Use 'days_until_exam' to model stress buildup before exams")
-print("  • Use 'daily_total_steps' as a physical activity indicator")
-print("  • Consider 'university' and 'course' as categorical features or for stratification")
