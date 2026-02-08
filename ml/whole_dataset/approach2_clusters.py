@@ -69,8 +69,8 @@ scaler_cluster = StandardScaler()
 X_cluster_scaled = scaler_cluster.fit_transform(X_cluster)
 
 # K-Means clustering
-print("\nPerforming K-Means clustering (K=7)...")
-kmeans = KMeans(n_clusters=7, random_state=42, n_init=20)
+print("\nPerforming K-Means clustering (K=2)...")
+kmeans = KMeans(n_clusters=2, random_state=42, n_init=20)
 user_profiles['user_cluster'] = kmeans.fit_predict(X_cluster_scaled)
 
 print("\nCluster distribution:")

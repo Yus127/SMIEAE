@@ -30,11 +30,11 @@ df = pd.read_csv(INPUT_PATH)
 print(f"Dataset loaded: {len(df)} rows, {len(df.columns)} columns")
 
 # ============================================================================
-# STEP 1: CREATE USER CLUSTERS (K=7) BASED ON PHYSIOLOGICAL PROFILES
+# STEP 1: CREATE USER CLUSTERS (K=2) BASED ON PHYSIOLOGICAL PROFILES
 # ============================================================================
 
 print("\n" + "="*80)
-print("STEP 1: CREATING USER CLUSTERS (K=7)")
+print("STEP 1: CREATING USER CLUSTERS (K=2)")
 print("="*80)
 
 # Features for clustering (physiological only, no stress/anxiety to avoid leakage)
@@ -64,8 +64,8 @@ scaler_cluster = StandardScaler()
 X_cluster_scaled = scaler_cluster.fit_transform(X_cluster)
 
 # K-Means clustering
-print("\nPerforming K-Means clustering (K=7)...")
-kmeans = KMeans(n_clusters=7, random_state=42, n_init=20)
+print("\nPerforming K-Means clustering (K=2)...")
+kmeans = KMeans(n_clusters=2, random_state=42, n_init=20)
 user_profiles['user_cluster'] = kmeans.fit_predict(X_cluster_scaled)
 
 print("\nCluster distribution:")

@@ -22,16 +22,16 @@ np.random.seed(42)
 tf.random.set_seed(42)
 
 INPUT_PATH = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/data_with_exam_features.csv'
-OUTPUT_DIR = '/Users/YusMolina/Downloads/smieae/results/whole_dataset/random_split/bilstm_final'
+OUTPUT_DIR = '/Users/YusMolina/Downloads/smieae/results/whole_dataset/random_split/model4'
 
 import os
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, "plots"), exist_ok=True)
 
 print("="*80)
-print("BI-LSTM BINARY CLASSIFICATION - RANDOM TEMPORAL SPLIT")
-print("Window: 3 timesteps | Split: 70/15/15 (Random) | Targets: Percentile 33/67")
-print("Architecture: 2 Bi-LSTM layers | Optimized for performance")
+print("BI-LSTM BINARY CLASSIFICATION - MEDIAN SPLIT (ALL DATA)")
+print("Window: 3 timesteps | Split: Random 70/15/15 | Target: Median (no exclusions)")
+print("Using ALL data points for better generalization")
 print("="*80)
 
 print("\nLoading data...")
@@ -126,13 +126,14 @@ temporal_features = [f for f in temporal_features if f in df.columns]
 print(f"✓ Using {len(temporal_features)} temporal features")
 
 # ============================================================================
-# CREATE SEQUENCES WITH PERCENTILE-BASED TARGETS
+# CREATE SEQUENCES WITH MEDIAN SPLIT (KEEPS ALL DATA)
 # ============================================================================
 
-def create_sequences_percentile(df, target_col, feature_cols, sequence_length=3):
+def create_sequences_median(df, target_col, feature_cols, sequence_length=3):
     """
-    Create sequences using 33rd/67th percentile split
-    Only keeps clear low (<33rd) and high (>67th) cases for better class separation
+    Create sequences using MEDIAN split
+    Low: below median, High: at or above median
+    KEEPS ALL DATA (no exclusions)
     """
     print(f"\n{'='*80}")
     print(f"Creating sequences for {target_col.upper()}")
@@ -141,23 +142,20 @@ def create_sequences_percentile(df, target_col, feature_cols, sequence_length=3)
     df_clean = df[df[target_col].notna()].copy()
     print(f"✓ Data with {target_col}: {len(df_clean)} observations")
     
-    # Percentile-based split (exclude ambiguous middle 34%)
-    p33 = df_clean[target_col].quantile(0.33)
-    p67 = df_clean[target_col].quantile(0.67)
+    # MEDIAN split (simple, keeps ALL data)
+    median = df_clean[target_col].median()
+    df_clean['target_binary'] = (df_clean[target_col] >= median).astype(int)
     
-    df_binary = df_clean[(df_clean[target_col] < p33) | (df_clean[target_col] > p67)].copy()
-    df_binary['target_binary'] = (df_binary[target_col] > p67).astype(int)
-    
-    print(f"✓ Percentile thresholds: Low < {p33:.2f}, High > {p67:.2f}")
-    print(f"✓ Kept {len(df_binary)}/{len(df_clean)} clear cases ({len(df_binary)/len(df_clean)*100:.1f}%)")
-    print(f"  Class 0 (Low):  {np.sum(df_binary['target_binary']==0)} samples")
-    print(f"  Class 1 (High): {np.sum(df_binary['target_binary']==1)} samples")
+    print(f"✓ MEDIAN split: threshold = {median:.2f}")
+    print(f"  Low (< {median:.2f}):  {np.sum(df_clean['target_binary']==0)} samples ({np.sum(df_clean['target_binary']==0)/len(df_clean)*100:.1f}%)")
+    print(f"  High (≥ {median:.2f}): {np.sum(df_clean['target_binary']==1)} samples ({np.sum(df_clean['target_binary']==1)/len(df_clean)*100:.1f}%)")
+    print(f"✓ KEEPING ALL DATA (no middle exclusion)")
     
     sequences = []
     targets = []
     
-    for user_id in df_binary['userid'].unique():
-        user_data = df_binary[df_binary['userid'] == user_id].copy()
+    for user_id in df_clean['userid'].unique():
+        user_data = df_clean[df_clean['userid'] == user_id].copy()
         
         if len(user_data) < sequence_length:
             continue
@@ -170,10 +168,14 @@ def create_sequences_percentile(df, target_col, feature_cols, sequence_length=3)
             sequences.append(user_features[i:i+sequence_length])
             targets.append(user_targets[i+sequence_length-1])  # Predict last timestep
     
-    print(f"✓ Created {len(sequences)} sequences from {len(df_binary['userid'].unique())} users")
-    print(f"  Sequences per user: {len(sequences) / len(df_binary['userid'].unique()):.1f} avg")
+    X = np.array(sequences)
+    y = np.array(targets)
     
-    return np.array(sequences), np.array(targets), p33, p67
+    print(f"✓ Created {len(sequences)} sequences from {len(df_clean['userid'].unique())} users")
+    print(f"  Sequences per user: {len(sequences) / len(df_clean['userid'].unique()):.1f} avg")
+    print(f"  Final distribution: Low={np.sum(y==0)} ({np.sum(y==0)/len(y)*100:.1f}%), High={np.sum(y==1)} ({np.sum(y==1)/len(y)*100:.1f}%)")
+    
+    return X, y, median
 
 # ============================================================================
 # NORMALIZE SEQUENCES
@@ -215,13 +217,13 @@ def normalize_sequences(X_train, X_val, X_test):
     return X_train, X_val, X_test, scaler, imputer
 
 # ============================================================================
-# BUILD BI-LSTM MODEL
+# BUILD BI-LSTM MODEL (SAME AS BEFORE)
 # ============================================================================
 
 def build_bilstm_model(n_timesteps, n_features):
     """
     Bidirectional LSTM with regularization
-    Architecture optimized for binary classification with temporal sequences
+    SAME architecture as percentile version
     """
     model = Sequential([
         # First Bi-LSTM layer (26 units)
@@ -274,12 +276,11 @@ def calculate_metrics(y_true, y_pred, y_pred_proba):
 # ============================================================================
 
 def create_visualizations(history, y_test, y_test_pred, y_test_proba, cm, target_name, output_dir):
-    """Create comprehensive training and evaluation visualizations"""
+    """Create comprehensive visualizations"""
     
-    # 1. Training History (Loss, Accuracy, AUC)
+    # 1. Training History
     fig, axes = plt.subplots(1, 3, figsize=(18, 5))
     
-    # Loss
     axes[0].plot(history.history['loss'], label='Train', linewidth=2, color='#2E86AB')
     axes[0].plot(history.history['val_loss'], label='Val', linewidth=2, color='#A23B72')
     axes[0].set_title(f'{target_name} - Loss', fontsize=14, fontweight='bold')
@@ -288,7 +289,6 @@ def create_visualizations(history, y_test, y_test_pred, y_test_proba, cm, target
     axes[0].legend(fontsize=10)
     axes[0].grid(alpha=0.3)
     
-    # Accuracy
     axes[1].plot(history.history['accuracy'], label='Train', linewidth=2, color='#2E86AB')
     axes[1].plot(history.history['val_accuracy'], label='Val', linewidth=2, color='#A23B72')
     axes[1].set_title(f'{target_name} - Accuracy', fontsize=14, fontweight='bold')
@@ -297,7 +297,6 @@ def create_visualizations(history, y_test, y_test_pred, y_test_proba, cm, target
     axes[1].legend(fontsize=10)
     axes[1].grid(alpha=0.3)
     
-    # AUC
     axes[2].plot(history.history['auc'], label='Train', linewidth=2, color='#2E86AB')
     axes[2].plot(history.history['val_auc'], label='Val', linewidth=2, color='#A23B72')
     axes[2].set_title(f'{target_name} - AUC', fontsize=14, fontweight='bold')
@@ -345,7 +344,6 @@ def create_visualizations(history, y_test, y_test_pred, y_test_proba, cm, target
     # 4. Prediction Distribution
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     
-    # Probability distribution by true class
     axes[0].hist(y_test_proba[y_test == 0], bins=30, alpha=0.7, label='True Low', color='#2E86AB')
     axes[0].hist(y_test_proba[y_test == 1], bins=30, alpha=0.7, label='True High', color='#A23B72')
     axes[0].axvline(0.5, color='red', linestyle='--', linewidth=2, label='Threshold')
@@ -355,7 +353,6 @@ def create_visualizations(history, y_test, y_test_pred, y_test_proba, cm, target
     axes[0].legend()
     axes[0].grid(alpha=0.3)
     
-    # Per-class accuracy
     if cm.shape == (2, 2):
         tn, fp, fn, tp = cm.ravel()
         low_acc = tn / (tn + fp) if (tn + fp) > 0 else 0
@@ -380,14 +377,14 @@ def create_visualizations(history, y_test, y_test_pred, y_test_proba, cm, target
 # ============================================================================
 
 def train_and_evaluate(df, target_col, target_name, output_dir):
-    """Complete training and evaluation pipeline for one target"""
+    """Complete training and evaluation pipeline"""
     
     print(f"\n{'#'*80}")
     print(f"PROCESSING {target_name.upper()}")
     print(f"{'#'*80}")
     
-    # 1. Create sequences
-    X, y, p33, p67 = create_sequences_percentile(df, target_col, temporal_features, sequence_length=3)
+    # 1. Create sequences with MEDIAN split
+    X, y, median = create_sequences_median(df, target_col, temporal_features, sequence_length=3)
     
     # 2. Random split (70/15/15)
     print(f"\n{'='*80}")
@@ -418,7 +415,7 @@ def train_and_evaluate(df, target_col, target_name, output_dir):
     model = build_bilstm_model(n_timesteps, n_features)
     
     print(f"\n{'='*80}")
-    print("MODEL ARCHITECTURE")
+    print("MODEL ARCHITECTURE (SAME AS PERCENTILE VERSION)")
     print(f"{'='*80}")
     model.summary()
     
@@ -482,7 +479,9 @@ def train_and_evaluate(df, target_col, target_name, output_dir):
     print(f"{target_name.upper()} RESULTS")
     print(f"{'='*80}")
     
-    print(f"\nThresholds: Low < {p33:.2f}, High > {p67:.2f}")
+    print(f"\nMedian threshold: {median:.2f}")
+    print(f"  Low:  < {median:.2f}")
+    print(f"  High: ≥ {median:.2f}")
     
     print("\nTrain Set:")
     print(f"  Accuracy:  {train_metrics['accuracy']:.4f}")
@@ -528,7 +527,6 @@ def train_and_evaluate(df, target_col, target_name, output_dir):
     print(f"{'-'*80}")
     print(cm)
     
-    # Calculate per-class accuracy
     if cm.shape == (2, 2):
         tn, fp, fn, tp = cm.ravel()
         low_acc = tn / (tn + fp) if (tn + fp) > 0 else 0
@@ -550,8 +548,7 @@ def train_and_evaluate(df, target_col, target_name, output_dir):
     
     return {
         'target': target_name,
-        'p33': p33,
-        'p67': p67,
+        'median': median,
         'train_acc': train_metrics['accuracy'],
         'train_f1': train_metrics['f1'],
         'train_auc': train_metrics['roc_auc'],
@@ -585,18 +582,18 @@ anxiety_results = train_and_evaluate(df, 'anxiety_level', 'Anxiety', OUTPUT_DIR)
 # ============================================================================
 
 print("\n" + "="*80)
-print("FINAL SUMMARY - RANDOM TEMPORAL SPLIT")
+print("FINAL SUMMARY - MEDIAN SPLIT (ALL DATA)")
 print("="*80)
 
 print(f"\nSTRESS:")
-print(f"  Thresholds: Low < {stress_results['p33']:.2f}, High > {stress_results['p67']:.2f}")
+print(f"  Median threshold: {stress_results['median']:.2f}")
 print(f"  Train: Acc={stress_results['train_acc']:.4f}, F1={stress_results['train_f1']:.4f}, AUC={stress_results['train_auc']:.4f}")
 print(f"  Val:   Acc={stress_results['val_acc']:.4f}, F1={stress_results['val_f1']:.4f}, AUC={stress_results['val_auc']:.4f}")
 print(f"  Test:  Acc={stress_results['test_acc']:.4f}, F1={stress_results['test_f1']:.4f}, AUC={stress_results['test_auc']:.4f}")
 print(f"  Gap:   {stress_results['gap']:.4f}")
 
 print(f"\nANXIETY:")
-print(f"  Thresholds: Low < {anxiety_results['p33']:.2f}, High > {anxiety_results['p67']:.2f}")
+print(f"  Median threshold: {anxiety_results['median']:.2f}")
 print(f"  Train: Acc={anxiety_results['train_acc']:.4f}, F1={anxiety_results['train_f1']:.4f}, AUC={anxiety_results['train_auc']:.4f}")
 print(f"  Val:   Acc={anxiety_results['val_acc']:.4f}, F1={anxiety_results['val_f1']:.4f}, AUC={anxiety_results['val_auc']:.4f}")
 print(f"  Test:  Acc={anxiety_results['test_acc']:.4f}, F1={anxiety_results['test_f1']:.4f}, AUC={anxiety_results['test_auc']:.4f}")
@@ -616,22 +613,23 @@ print(f"  Train-Test Gap: {avg_gap:.4f}")
 
 # Save summary
 summary_df = pd.DataFrame([stress_results, anxiety_results])
-summary_df.to_csv(os.path.join(OUTPUT_DIR, 'final_results_summary.csv'), index=False)
+summary_df.to_csv(os.path.join(OUTPUT_DIR, 'median_split_results_summary.csv'), index=False)
 
 print(f"\n{'='*80}")
-print("KEY FEATURES OF THIS MODEL:")
+print("COMPARISON: PERCENTILE vs MEDIAN SPLIT")
 print(f"{'='*80}")
-print("✓ Random temporal split (70/15/15) - optimized for performance")
-print("✓ Percentile-based targets (33/67) - clear class separation")
-print("✓ 3-timestep sliding windows - captures temporal patterns")
-print("✓ Bidirectional LSTM - processes sequences forward and backward")
-print("✓ 2 Bi-LSTM layers (26, 13 units) - optimal architecture")
-print("✓ Dropout (0.48, 0.48, 0.38) + L2 regularization - prevents overfitting")
-print("✓ Class weights - handles class imbalance")
-print("✓ Early stopping + LR scheduling - adaptive training")
-print("✓ Comprehensive visualizations - training curves, ROC, confusion matrix")
+print("\nPercentile (33/67) approach:")
+print("  ✓ Better class separation (excludes ambiguous middle)")
+print("  ✓ Higher performance metrics")
+print("  ✗ Discards ~34% of data")
+print("  ✗ May overfit to extreme cases")
+
+print("\nMedian approach (this model):")
+print("  ✓ Uses ALL data (better for generalization)")
+print("  ✓ More balanced training")
+print("  ✓ Better represents full spectrum")
+print("  ✗ Includes ambiguous boundary cases")
+print("  ✗ Slightly lower metrics expected")
 
 print(f"\n✅ COMPLETE! All results saved to: {OUTPUT_DIR}")
-print("\nNote: This model uses random split for optimal performance metrics.")
-print("For production deployment on new users, consider user-based splitting.")
 print("="*80)

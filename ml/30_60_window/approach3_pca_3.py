@@ -1,3 +1,4 @@
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,7 +13,6 @@ from sklearn.metrics import (f1_score, accuracy_score, precision_score,
                             recall_score, roc_auc_score, roc_curve, auc,
                             confusion_matrix, classification_report, ConfusionMatrixDisplay)
 from sklearn.preprocessing import label_binarize
-from sklearn.cluster import KMeans
 from itertools import cycle
 import xgboost as xgb
 import warnings
@@ -21,20 +21,21 @@ warnings.filterwarnings('ignore')
 print("="*80)
 print("ML PIPELINE: PCA + 3-CLASS CLASSIFICATION")
 print("STRESS & ANXIETY - TIME SERIES SPLIT (70-15-15)")
-print("SEPARATE ANALYSIS FOR 5MIN AND 10MIN WINDOWS")
+print("SEPARATE ANALYSIS FOR 30MIN AND 60MIN WINDOWS")
+print("SIMPLIFIED FEATURE ENGINEERING (NO USER CLUSTERING)")
 print("="*80)
 
 # Paths
 ml_dir = "/Users/YusMolina/Downloads/smieae/data/ml_ready"
-output_dir = "/Users/YusMolina/Downloads/smieae/results/5_10_dataset/timeseries/model3"
+output_dir = "/Users/YusMolina/Downloads/smieae/results/30_60_dataset/timeseries/model3"
 import os
 os.makedirs(output_dir, exist_ok=True)
 os.makedirs(os.path.join(output_dir, "plots"), exist_ok=True)
 
 # Define files to process
 files = [
-    "enriched/ml_ready_5min_window_enriched.csv",
-    "enriched/ml_ready_10min_window_enriched.csv"
+    "enriched/ml_ready_30min_window_enriched.csv",
+    "enriched/ml_ready_60min_window_enriched.csv"
 ]
 
 # Store overall results
@@ -42,8 +43,8 @@ all_results = {}
 
 # Process each window
 for file_idx, file in enumerate(files):
-    window_type = "5min" if "5min" in file else "10min"
-    window_prefix = "w5" if "5min" in file else "w10"
+    window_type = "30min" if "30min" in file else "60min"
+    window_prefix = "w30" if "30min" in file else "w60"
     
     print("\n" + "="*80)
     print(f"PROCESSING: {window_type.upper()} WINDOW")
@@ -68,8 +69,8 @@ for file_idx, file in enumerate(files):
     df = pd.read_csv(data_file)
     print(f"✓ Loaded {len(df)} observations")
     
-    # Define features
-    feature_columns = [
+    # Define base features
+    base_feature_columns = [
         'is_exam_period', 'days_until_exam', 'is_pre_exam_week', 'is_easter_break',
         'daily_total_steps',
     ]
@@ -82,9 +83,24 @@ for file_idx, file in enumerate(files):
         f'{window_prefix}_heart_rate_activity_beats per minute_max',
         f'{window_prefix}_heart_rate_activity_beats per minute_median',
     ]
-    feature_columns.extend(hr_features)
+    base_feature_columns.extend(hr_features)
     
-    available_features = [col for col in feature_columns if col in df.columns]
+    # Add other physiological features if available
+    optional_features = [
+        'daily_hrv_summary_rmssd',
+        'daily_respiratory_rate_daily_respiratory_rate',
+        'sleep_global_duration',
+        'sleep_global_efficiency',
+        'deep_sleep_minutes',
+        'rem_sleep_minutes',
+        'wake_count',
+        'minute_spo2_value_mean',
+        'activity_level_sedentary_count',
+        'hrv_details_rmssd_min'
+    ]
+    
+    available_base_features = [col for col in base_feature_columns if col in df.columns]
+    available_optional_features = [col for col in optional_features if col in df.columns]
     
     # Identify targets
     target_columns = [col for col in df.columns if col.startswith('q_i_stress') or col.startswith('q_i_anxiety')]
@@ -157,148 +173,159 @@ for file_idx, file in enumerate(files):
             df_sorted = df.copy()
             print("⚠ Warning: No timestamp column found. Assuming chronological order.")
         
-        df_clean = df_sorted[available_features + [primary_target, 'userid']].copy()
+        # Select base features and target
+        df_clean = df_sorted[available_base_features + available_optional_features + [primary_target, 'userid']].copy()
         df_clean = df_clean.dropna(subset=[primary_target])
-        
-        # Impute missing features
-        for col in available_features:
-            if df_clean[col].isna().sum() > 0:
-                median_val = df_clean[col].median()
-                df_clean.loc[:, col] = df_clean[col].fillna(median_val)
         
         print(f"✓ Clean dataset: {len(df_clean)} observations from {df_clean['userid'].nunique()} users")
         
         # ====================================================================
-        # 3. USER-BASED CLUSTERING WITH PCA (NO LEAKAGE)
+        # 3. SIMPLIFIED FEATURE ENGINEERING (PERSONAL BASELINES)
         # ====================================================================
-        print(f"\n3. USER-BASED CLUSTERING WITH PCA ({target_name})")
+        print(f"\n3. FEATURE ENGINEERING - PERSONAL BASELINES ({target_name})")
         print("-"*80)
         
-        # User profiles (based on physiology, NOT target!)
-        user_agg_dict = {
-            'daily_total_steps': 'mean',
-            'is_exam_period': 'mean'
-        }
+        # Calculate user baselines
+        print("Calculating personal baselines...")
         
-        # Add HR features that exist
-        for feat in hr_features:
-            if feat in df_clean.columns:
-                user_agg_dict[feat] = 'mean'
+        baseline_features = {}
         
-        user_profiles = df_clean.groupby('userid').agg(user_agg_dict).reset_index()
-        
-        # Create cleaner column names
-        col_mapping = {'userid': 'userid'}
-        user_feature_cols = []
-        
-        if 'daily_total_steps' in user_agg_dict:
-            col_mapping['daily_total_steps'] = 'avg_steps'
-            user_feature_cols.append('avg_steps')
-        if 'is_exam_period' in user_agg_dict:
-            col_mapping['is_exam_period'] = 'exam_exposure'
-            user_feature_cols.append('exam_exposure')
-        
-        for feat in hr_features:
-            if feat in user_profiles.columns:
-                new_name = f"avg_{feat.replace(f'{window_prefix}_', '').replace(' ', '_')}"
-                col_mapping[feat] = new_name
-                user_feature_cols.append(new_name)
-        
-        user_profiles = user_profiles.rename(columns=col_mapping)
-        
-        print(f"✓ Created user profiles with {len(user_feature_cols)} features")
-        
-        # Normalize user features
-        X_users = user_profiles[user_feature_cols].fillna(0)
-        scaler_user = StandardScaler()
-        X_users_scaled = scaler_user.fit_transform(X_users)
-        
-        print(f"\n  Original user features: {X_users_scaled.shape[1]}")
-        
-        # Apply PCA to user features
-        pca_users = PCA(n_components=None)
-        pca_users.fit(X_users_scaled)
-        
-        # Show explained variance
-        print(f"\n  PCA Explained Variance Ratio (user clustering):")
-        for i, var in enumerate(pca_users.explained_variance_ratio_[:5]):  # Show first 5
-            cumsum = pca_users.explained_variance_ratio_[:i+1].sum()
-            print(f"    PC{i+1}: {var*100:.1f}% (cumulative: {cumsum*100:.1f}%)")
-        
-        # Choose number of components (e.g., 95% variance)
-        n_components_user = min(
-            np.argmax(pca_users.explained_variance_ratio_.cumsum() >= 0.95) + 1,
-            len(user_feature_cols)
-        )
-        print(f"\n  → Using {n_components_user} components for user clustering (≥95% variance)")
-        
-        # Apply PCA with selected components
-        pca_users_final = PCA(n_components=n_components_user, random_state=42)
-        X_users_pca = pca_users_final.fit_transform(X_users_scaled)
-        
-        # Cluster users on PCA components
-        kmeans_users = KMeans(n_clusters=7, random_state=42, n_init=20)
-        user_clusters = kmeans_users.fit_predict(X_users_pca)
-        user_profiles['user_cluster'] = user_clusters
-        
-        print(f"\n✓ Clustered users into 7 groups using {n_components_user} PCA components")
-        for cluster_id in range(7):
-            n = (user_clusters == cluster_id).sum()
-            print(f"  Cluster {cluster_id}: {n} users")
-        
-        # Add to data
-        df_clean = df_clean.merge(user_profiles[['userid', 'user_cluster']], 
-                                 on='userid', how='left')
-        
-        # ====================================================================
-        # 4. CREATE ENHANCED FEATURES (NO LEAKAGE)
-        # ====================================================================
-        print(f"\n4. CREATING ENHANCED FEATURES ({target_name})")
-        print("-"*80)
-        
-        # Find HR mean feature
+        # HR baseline
         hr_mean_feat = None
         for feat in hr_features:
             if 'mean' in feat and feat in df_clean.columns:
                 hr_mean_feat = feat
                 break
         
-        # User baseline deviations
         if hr_mean_feat:
-            user_hr_baseline = df_clean.groupby('userid')[hr_mean_feat].transform('mean')
-            df_clean['hr_deviation'] = df_clean[hr_mean_feat] - user_hr_baseline
-        else:
-            df_clean['hr_deviation'] = 0
+            baseline_features['hr_baseline'] = df_clean.groupby('userid')[hr_mean_feat].transform('mean')
         
-        user_step_baseline = df_clean.groupby('userid')['daily_total_steps'].transform('mean')
-        df_clean['steps_ratio'] = df_clean['daily_total_steps'] / (user_step_baseline.replace(0, 1) + 1)
+        # Steps baseline
+        if 'daily_total_steps' in df_clean.columns:
+            baseline_features['steps_baseline'] = df_clean.groupby('userid')['daily_total_steps'].transform('mean')
         
-        # Interaction features
-        df_clean['cluster_x_exam'] = df_clean['user_cluster'] * df_clean['is_exam_period']
-        df_clean['hr_dev_x_exam'] = df_clean['hr_deviation'] * df_clean['is_exam_period']
-        df_clean['exam_proximity'] = 1 / (df_clean['days_until_exam'].clip(lower=1) + 1)
-        df_clean['steps_x_exam_prox'] = df_clean['steps_ratio'] * df_clean['exam_proximity']
+        # HRV baseline
+        if 'daily_hrv_summary_rmssd' in df_clean.columns:
+            baseline_features['hrv_baseline'] = df_clean.groupby('userid')['daily_hrv_summary_rmssd'].transform('mean')
         
-        print(f"✓ Added user features and interactions")
+        # Sleep baseline
+        if 'sleep_global_duration' in df_clean.columns:
+            baseline_features['sleep_baseline'] = df_clean.groupby('userid')['sleep_global_duration'].transform('mean')
+        
+        # Respiratory baseline
+        if 'daily_respiratory_rate_daily_respiratory_rate' in df_clean.columns:
+            baseline_features['resp_baseline'] = df_clean.groupby('userid')['daily_respiratory_rate_daily_respiratory_rate'].transform('mean')
+        
+        print(f"✓ Created {len(baseline_features)} baseline features")
         
         # ====================================================================
-        # 5. PREPARE FEATURE SET
+        # 4. CREATE DEVIATION AND INTERACTION FEATURES
         # ====================================================================
-        print(f"\n5. PREPARING FEATURE SET ({target_name})")
+        print(f"\n4. CREATING DEVIATION AND INTERACTION FEATURES ({target_name})")
         print("-"*80)
         
-        enhanced_features = available_features + [
-            'user_cluster', 'hr_deviation', 'steps_ratio',
-            'cluster_x_exam', 'hr_dev_x_exam', 'exam_proximity', 'steps_x_exam_prox'
-        ]
+        engineered_features = []
         
-        print(f"  Total features before PCA: {len(enhanced_features)}")
+        # HR deviation
+        if hr_mean_feat and 'hr_baseline' in baseline_features:
+            df_clean['hr_deviation'] = (df_clean[hr_mean_feat] - baseline_features['hr_baseline']) / (baseline_features['hr_baseline'] + 1e-6)
+            engineered_features.append('hr_deviation')
         
-        df_model = df_clean[enhanced_features + [primary_target]].copy()
+        # Activity ratio
+        if 'steps_baseline' in baseline_features:
+            df_clean['activity_ratio'] = df_clean['daily_total_steps'] / (baseline_features['steps_baseline'] + 1)
+            engineered_features.append('activity_ratio')
+        
+        # HRV deviation
+        if 'hrv_baseline' in baseline_features:
+            df_clean['hrv_deviation'] = (df_clean['daily_hrv_summary_rmssd'] - baseline_features['hrv_baseline']) / (baseline_features['hrv_baseline'] + 1e-6)
+            engineered_features.append('hrv_deviation')
+        
+        # Sleep deviation
+        if 'sleep_baseline' in baseline_features:
+            df_clean['sleep_deviation'] = (df_clean['sleep_global_duration'] - baseline_features['sleep_baseline']) / (baseline_features['sleep_baseline'] + 1e-6)
+            engineered_features.append('sleep_deviation')
+        
+        # Exam proximity features
+        if 'days_until_exam' in df_clean.columns:
+            df_clean['exam_proximity_inverse'] = 1 / (df_clean['days_until_exam'].fillna(365).clip(lower=1) + 1)
+            engineered_features.append('exam_proximity_inverse')
+        
+        # Interaction features with exam period
+        if 'is_exam_period' in df_clean.columns:
+            if 'hr_deviation' in engineered_features:
+                df_clean['hr_dev_x_exam'] = df_clean['hr_deviation'] * df_clean['is_exam_period']
+                engineered_features.append('hr_dev_x_exam')
+            
+            if 'activity_ratio' in engineered_features:
+                df_clean['activity_x_exam'] = df_clean['activity_ratio'] * df_clean['is_exam_period']
+                engineered_features.append('activity_x_exam')
+            
+            if 'hrv_deviation' in engineered_features:
+                df_clean['hrv_dev_x_exam'] = df_clean['hrv_deviation'] * df_clean['is_exam_period']
+                engineered_features.append('hrv_dev_x_exam')
+            
+            if 'exam_proximity_inverse' in engineered_features:
+                if 'activity_ratio' in engineered_features:
+                    df_clean['steps_x_exam_prox'] = df_clean['activity_ratio'] * df_clean['exam_proximity_inverse']
+                    engineered_features.append('steps_x_exam_prox')
+        
+        # Advanced physiological features
+        if 'sleep_global_efficiency' in df_clean.columns and 'deep_sleep_minutes' in df_clean.columns and 'sleep_global_duration' in df_clean.columns:
+            df_clean['sleep_quality'] = (df_clean['sleep_global_efficiency'] * df_clean['deep_sleep_minutes']) / (df_clean['sleep_global_duration'] + 1)
+            engineered_features.append('sleep_quality')
+        
+        if 'daily_total_steps' in df_clean.columns and 'activity_level_sedentary_count' in df_clean.columns:
+            df_clean['activity_intensity'] = df_clean['daily_total_steps'] / (df_clean['activity_level_sedentary_count'] + 1)
+            engineered_features.append('activity_intensity')
+        
+        if 'daily_hrv_summary_rmssd' in df_clean.columns and hr_mean_feat:
+            df_clean['autonomic_balance'] = df_clean['daily_hrv_summary_rmssd'] / (df_clean[hr_mean_feat] + 1)
+            engineered_features.append('autonomic_balance')
+        
+        if 'rem_sleep_minutes' in df_clean.columns and 'deep_sleep_minutes' in df_clean.columns and 'sleep_global_duration' in df_clean.columns:
+            df_clean['recovery_score'] = (df_clean['rem_sleep_minutes'] + df_clean['deep_sleep_minutes']) / (df_clean['sleep_global_duration'] + 1)
+            engineered_features.append('recovery_score')
+        
+        if hr_mean_feat and 'daily_hrv_summary_rmssd' in df_clean.columns:
+            df_clean['cardio_stress'] = df_clean[hr_mean_feat] / (df_clean['daily_hrv_summary_rmssd'] + 1)
+            engineered_features.append('cardio_stress')
+        
+        if 'wake_count' in df_clean.columns and 'sleep_global_duration' in df_clean.columns:
+            df_clean['sleep_fragmentation'] = df_clean['wake_count'] / (df_clean['sleep_global_duration'] / 60 + 1)
+            engineered_features.append('sleep_fragmentation')
+        
+        if 'minute_spo2_value_mean' in df_clean.columns and 'daily_respiratory_rate_daily_respiratory_rate' in df_clean.columns:
+            df_clean['resp_efficiency'] = df_clean['minute_spo2_value_mean'] / (df_clean['daily_respiratory_rate_daily_respiratory_rate'] + 1)
+            engineered_features.append('resp_efficiency')
+        
+        print(f"✓ Created {len(engineered_features)} engineered features")
+        
+        # ====================================================================
+        # 5. PREPARE FINAL FEATURE SET
+        # ====================================================================
+        print(f"\n5. PREPARING FINAL FEATURE SET ({target_name})")
+        print("-"*80)
+        
+        # Combine all features
+        all_features = available_base_features + available_optional_features + engineered_features
+        
+        print(f"  Total features before PCA: {len(all_features)}")
+        print(f"    Base features: {len(available_base_features)}")
+        print(f"    Optional features: {len(available_optional_features)}")
+        print(f"    Engineered features: {len(engineered_features)}")
+        
+        df_model = df_clean[all_features + [primary_target]].copy()
         df_model = df_model.dropna()
         
-        # Clean extreme values
-        for col in enhanced_features:
+        # Impute any remaining missing values with median
+        for col in all_features:
+            if df_model[col].isna().sum() > 0:
+                median_val = df_model[col].median()
+                df_model.loc[:, col] = df_model[col].fillna(median_val)
+        
+        # Clean extreme values (clip at 0.1% and 99.9% percentiles)
+        for col in all_features:
             if df_model[col].dtype in ['float64', 'float32', 'int64', 'int32']:
                 upper = df_model[col].quantile(0.999)
                 lower = df_model[col].quantile(0.001)
@@ -325,7 +352,7 @@ for file_idx, file in enumerate(files):
         print(f"  Class 1 (Medium): {(y_3class == 1).sum()} observations ({p33:.1f}-{p67:.1f})")
         print(f"  Class 2 (High):   {(y_3class == 2).sum()} observations (≥{p67:.1f})")
         
-        X = df_model[enhanced_features]
+        X = df_model[all_features]
         
         # ====================================================================
         # 7. TIME SERIES SPLIT (70-15-15)
@@ -357,7 +384,7 @@ for file_idx, file in enumerate(files):
         print(f"    Low: {(y_test==0).sum()}, Medium: {(y_test==1).sum()}, High: {(y_test==2).sum()}")
         
         # ====================================================================
-        # 8. APPLY PCA TO FEATURES
+        # 8. APPLY PCA TO FEATURES (SINGLE PCA STEP)
         # ====================================================================
         print(f"\n8. APPLYING PCA TO FEATURE SET ({target_name})")
         print("-"*80)
@@ -377,9 +404,9 @@ for file_idx, file in enumerate(files):
             cumsum = pca_explore.explained_variance_ratio_[:i+1].sum()
             print(f"    PC{i+1}: {pca_explore.explained_variance_ratio_[i]*100:.1f}% (cumulative: {cumsum*100:.1f}%)")
         
-        # Choose components to retain 90% variance
-        n_components = np.argmax(pca_explore.explained_variance_ratio_.cumsum() >= 0.90) + 1
-        print(f"\n  → Using {n_components} components (≥90% variance)")
+        # Choose components to retain 80% variance (like Code 2)
+        n_components = np.argmax(pca_explore.explained_variance_ratio_.cumsum() >= 0.80) + 1
+        print(f"\n  → Using {n_components} components (≥80% variance)")
         
         # Apply PCA with selected components
         pca_final = PCA(n_components=n_components, random_state=42)
@@ -725,7 +752,7 @@ for file_idx, file in enumerate(files):
         print(f"     High (Class 2):   F1 = {best['test_f1_per_class'][2]:.4f}")
         
         print(f"\n📊 PERFORMANCE WITH PCA:")
-        print(f"   Original features:  {len(enhanced_features)}")
+        print(f"   Original features:  {len(all_features)}")
         print(f"   PCA components:     {n_components} (retained {pca_final.explained_variance_ratio_.sum()*100:.1f}% variance)")
         print(f"   Test F1 (3-class):  {best['test_f1']:.4f}")
         
@@ -739,7 +766,8 @@ for file_idx, file in enumerate(files):
             'best_test_auc': best['test_auc'],
             'test_f1_per_class': best['test_f1_per_class'],
             'n_samples': len(df_model),
-            'n_components': n_components
+            'n_components': n_components,
+            'n_features_original': len(all_features)
         }
         
         # Detailed classification report
@@ -753,8 +781,8 @@ for file_idx, file in enumerate(files):
             {'Model': name, **{k: v for k, v in res.items() if isinstance(v, (int, float))}}
             for name, res in results.items()
         ])
-        comparison_df.to_csv(os.path.join(target_output_dir, 'results_pca_3class.csv'), index=False)
-        print(f"\n✓ Saved: results_pca_3class.csv")
+        comparison_df.to_csv(os.path.join(target_output_dir, 'results_pca_3class_simplified.csv'), index=False)
+        print(f"\n✓ Saved: results_pca_3class_simplified.csv")
         
         # ====================================================================
         # 13. OTHER VISUALIZATIONS
@@ -778,7 +806,7 @@ for file_idx, file in enumerate(files):
         # Cumulative variance
         cumsum = np.cumsum(pca_explore.explained_variance_ratio_)*100
         axes[1].plot(range(1, len(cumsum)+1), cumsum, 'bo-')
-        axes[1].axhline(y=90, color='r', linestyle='--', label='90% threshold')
+        axes[1].axhline(y=80, color='r', linestyle='--', label='80% threshold')
         axes[1].axvline(x=n_components, color='r', linestyle='--', label=f'{n_components} components')
         axes[1].set_xlabel('Number of Components')
         axes[1].set_ylabel('Cumulative Variance Explained (%)')
@@ -857,7 +885,7 @@ for file_idx, file in enumerate(files):
 # OVERALL COMPARISON
 # ============================================================================
 print("\n\n" + "="*80)
-print("OVERALL COMPARISON: STRESS vs ANXIETY (5MIN vs 10MIN)")
+print("OVERALL COMPARISON: STRESS vs ANXIETY (30MIN vs 60MIN)")
 print("="*80)
 
 if all_results:
@@ -865,26 +893,27 @@ if all_results:
     print("BEST MODELS SUMMARY:")
     print("-"*80)
     
-    for window_type in ['5min', '10min']:
+    for window_type in ['30min', '60min']:
         if window_type in all_results:
             print(f"\n{window_type.upper()} Window:")
             for target_name in ['Stress', 'Anxiety']:
                 if target_name in all_results[window_type]:
                     res = all_results[window_type][target_name]
                     print(f"  {target_name}:")
-                    print(f"    Best Model:     {res['best_model']}")
-                    print(f"    Validation F1:  {res['best_val_f1']:.4f}")
-                    print(f"    Validation AUC: {res['best_val_auc']:.4f}")
-                    print(f"    Test F1:        {res['best_test_f1']:.4f}")
-                    print(f"    Test Accuracy:  {res['best_test_acc']:.4f}")
-                    print(f"    Test AUC:       {res['best_test_auc']:.4f}")
-                    print(f"    F1 per class:   Low={res['test_f1_per_class'][0]:.3f}, Med={res['test_f1_per_class'][1]:.3f}, High={res['test_f1_per_class'][2]:.3f}")
-                    print(f"    PCA components: {res['n_components']}")
-                    print(f"    Dataset Size:   {res['n_samples']} observations")
+                    print(f"    Best Model:        {res['best_model']}")
+                    print(f"    Validation F1:     {res['best_val_f1']:.4f}")
+                    print(f"    Validation AUC:    {res['best_val_auc']:.4f}")
+                    print(f"    Test F1:           {res['best_test_f1']:.4f}")
+                    print(f"    Test Accuracy:     {res['best_test_acc']:.4f}")
+                    print(f"    Test AUC:          {res['best_test_auc']:.4f}")
+                    print(f"    F1 per class:      Low={res['test_f1_per_class'][0]:.3f}, Med={res['test_f1_per_class'][1]:.3f}, High={res['test_f1_per_class'][2]:.3f}")
+                    print(f"    Original features: {res['n_features_original']}")
+                    print(f"    PCA components:    {res['n_components']}")
+                    print(f"    Dataset Size:      {res['n_samples']} observations")
     
     # Create overall summary CSV
     summary_data = []
-    for window_type in ['5min', '10min']:
+    for window_type in ['30min', '60min']:
         if window_type in all_results:
             for target_name in ['Stress', 'Anxiety']:
                 if target_name in all_results[window_type]:
@@ -901,45 +930,19 @@ if all_results:
                         'F1_Low': res['test_f1_per_class'][0],
                         'F1_Medium': res['test_f1_per_class'][1],
                         'F1_High': res['test_f1_per_class'][2],
+                        'N_Features_Original': res['n_features_original'],
                         'N_Components': res['n_components'],
                         'N_Samples': res['n_samples']
                     })
     
     if summary_data:
         summary_df = pd.DataFrame(summary_data)
-        summary_df.to_csv(os.path.join(output_dir, 'overall_summary_pca_3class.csv'), index=False)
-        print("\n✓ Saved: overall_summary_pca_3class.csv")
+        summary_df.to_csv(os.path.join(output_dir, 'overall_summary_pca_3class_simplified.csv'), index=False)
+        print("\n✓ Saved: overall_summary_pca_3class_simplified.csv")
 
-print("\n" + "="*80)
-print("✅ COMPLETE! All windows and targets processed.")
-print("   Time Series Split: 70% Train - 15% Val - 15% Test (chronological)")
-print("   PCA: Dimensionality reduction with 90% variance retention")
-print("   3-Class Classification: Low / Medium / High")
-print("   ROC Curves: Comprehensive multi-class visualizations")
-print("="*80)
-print(f"\nResults saved to: {output_dir}")
-print("  - 5min_window/")
-print("    - stress/")
-print("      - plots/")
-print("        - roc_curve_*.png (individual models, all classes)")
-print("        - roc_curve_comparison_*_class.png (per-class comparisons)")
-print("        - roc_curve_multiclass_best_model.png")
-print("        - roc_curve_validation_vs_test.png")
-print("        - pca_variance.png")
-print("        - confusion_matrix_3class.png")
-print("        - model_comparison.png")
-print("    - anxiety/")
-print("      - plots/ (same structure)")
-print("  - 10min_window/")
-print("    - stress/")
-print("      - plots/ (same structure)")
-print("    - anxiety/")
-print("      - plots/ (same structure)")
-print("  - overall_summary_pca_3class.csv")
-print("\n💡 Key Features:")
-print("   • PCA for user clustering (avoiding target leakage)")
-print("   • PCA for feature dimensionality reduction (90% variance)")
-print("   • 3-class classification (captures medium stress/anxiety)")
-print("   • Time series split (respects temporal order)")
-print("   • Comprehensive ROC analysis (10 plots per target)")
-print("="*80)
+print("\n✅ COMPLETE! All windows and targets processed.")
+print("\nKEY CHANGES FROM ORIGINAL:")
+print("  • Removed user-based clustering (no PCA on user profiles)")
+print("  • Simplified feature engineering with personal baselines")
+print("  • Single PCA step at 80% variance (like Code 2)")
+print("  • Maintained time series split and all visualizations")

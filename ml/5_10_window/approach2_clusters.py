@@ -18,20 +18,20 @@ warnings.filterwarnings('ignore')
 print("="*80)
 print("ML PIPELINE: STRESS & ANXIETY - BINARY CLASSIFICATION")
 print("USER FEATURES + TIME SERIES SPLIT (70-15-15) + NO TEMPORAL LEAKAGE")
-print("SEPARATE ANALYSIS FOR 30MIN AND 60MIN WINDOWS")
+print("SEPARATE ANALYSIS FOR 5MIN AND 10MIN WINDOWS")
 print("="*80)
 
 # Paths
 ml_dir = "/Users/YusMolina/Downloads/smieae/data/ml_ready"
-output_dir = "/Users/YusMolina/Downloads/smieae/results/30_60_dataset/timeseries/model2"
+output_dir = "/Users/YusMolina/Downloads/smieae/results/5_10_dataset/timeseries/model2"
 import os
 os.makedirs(output_dir, exist_ok=True)
 os.makedirs(os.path.join(output_dir, "plots"), exist_ok=True)
 
 # Define files to process
 files = [
-    "enriched/ml_ready_30min_window_enriched.csv",
-    "enriched/ml_ready_60min_window_enriched.csv"
+    "enriched/ml_ready_5min_window_enriched.csv",
+    "enriched/ml_ready_10min_window_enriched.csv"
 ]
 
 # Store overall results
@@ -39,8 +39,8 @@ all_results = {}
 
 # Process each window
 for file_idx, file in enumerate(files):
-    window_type = "30min" if "30min" in file else "60min"
-    window_prefix = "w30" if "30min" in file else "w60"
+    window_type = "5min" if "5min" in file else "10min"
+    window_prefix = "w5" if "5min" in file else "w10"
     
     print("\n" + "="*80)
     print(f"PROCESSING: {window_type.upper()} WINDOW")
@@ -215,11 +215,11 @@ for file_idx, file in enumerate(files):
             scaler_user = StandardScaler()
             X_users_scaled = scaler_user.fit_transform(X_users)
             
-            kmeans_users = KMeans(n_clusters=7, random_state=42, n_init=20)
+            kmeans_users = KMeans(n_clusters=5, random_state=42, n_init=20)
             user_clusters = kmeans_users.fit_predict(X_users_scaled)
             user_profiles['user_cluster'] = user_clusters
             
-            print(f"✓ Created 7 user clusters (based on physiology, NOT {target_name.lower()})")
+            print(f"✓ Created 5 user clusters (based on physiology, NOT {target_name.lower()})")
         else:
             user_profiles['user_cluster'] = 0
             print("⚠ Limited features for clustering")
@@ -635,7 +635,7 @@ for file_idx, file in enumerate(files):
         print(f"   • Individual curves for each model (5 plots)")
         print(f"   • Comparison curve with all models (1 plot)")
         print(f"   • Validation vs Test comparison for best model (1 plot)")
-        print(f"   • Total: 7 ROC curve visualizations")
+        print(f"   • Total: 5 ROC curve visualizations")
         
         print("\n" + "#"*80)
         print(f"# ✅ COMPLETE: {target_name} ({window_type})")
@@ -645,7 +645,7 @@ for file_idx, file in enumerate(files):
 # OVERALL COMPARISON
 # ============================================================================
 print("\n\n" + "="*80)
-print("OVERALL COMPARISON: STRESS vs ANXIETY (30MIN vs 60MIN)")
+print("OVERALL COMPARISON: STRESS vs ANXIETY (5MIN vs 10MIN)")
 print("="*80)
 
 if all_results:
@@ -653,7 +653,7 @@ if all_results:
     print("BEST MODELS SUMMARY:")
     print("-"*80)
     
-    for window_type in ['30min', '60min']:
+    for window_type in ['5min', '10min']:
         if window_type in all_results:
             print(f"\n{window_type.upper()} Window:")
             for target_name in ['Stress', 'Anxiety']:
@@ -670,7 +670,7 @@ if all_results:
     
     # Create overall summary CSV
     summary_data = []
-    for window_type in ['30min', '60min']:
+    for window_type in ['5min', '10min']:
         if window_type in all_results:
             for target_name in ['Stress', 'Anxiety']:
                 if target_name in all_results[window_type]:
@@ -700,7 +700,7 @@ print("   User Features: NO temporal leakage")
 print("   ROC Curves: Comprehensive visualizations generated")
 print("="*80)
 print(f"\nResults saved to: {output_dir}")
-print("  - 30min_window/")
+print("  - 5min_window/")
 print("    - stress/")
 print("      - plots/")
 print("        - roc_curve_*.png (individual model curves)")
@@ -709,7 +709,7 @@ print("        - roc_curve_validation_vs_test.png")
 print("        - confusion_matrix.png")
 print("    - anxiety/")
 print("      - plots/ (same structure)")
-print("  - 60min_window/")
+print("  - 10min_window/")
 print("    - stress/")
 print("      - plots/ (same structure)")
 print("    - anxiety/")
