@@ -5,21 +5,9 @@ import seaborn as sns
 from pathlib import Path
 import glob
 
-"""AHORA DEBO VER SI HAY CORRELACIÓN ENTRE LAS VAIABLES Y LOS OBJETIVOS """
 
-# Configuration
 csv_folder = "/Users/YusMolina/Downloads/smieae/data/data_clean/fitbit"
 output_folder = "/Users/YusMolina/Downloads/smieae/data/data_clean/fitbit/correlationResults"
-
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from pathlib import Path
-import glob
-
-
-# Create output folder if it doesn't exist
 Path(output_folder).mkdir(exist_ok=True)
 
 # Read and combine all CSV files
@@ -46,7 +34,6 @@ def load_all_csvs(folder_path):
     
     return combined_df
 
-# Load data
 df = load_all_csvs(csv_folder)
 
 # Display basic information

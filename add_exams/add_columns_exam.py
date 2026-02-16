@@ -10,7 +10,6 @@ user_university_mapping = {
     **{i: 1 for i in range(36, 56)}   # University 1, Course C
 }
 
-# Define exam periods
 university_1_exams = [
     ('2025-03-17', '2025-03-21', 'Marzo'),
     ('2025-05-12', '2025-05-16', 'Mayo'),
@@ -43,7 +42,6 @@ print(f"Dataset loaded: {len(df)} rows, {len(df.columns)} columns")
 # Ensure date column is datetime
 df[DATE_COL] = pd.to_datetime(df[DATE_COL])
 
-# Initialize new columns
 df['university'] = df[USER_COL].map(user_university_mapping)
 df['is_exam_period'] = 0
 df['exam_period_name'] = ''
@@ -59,14 +57,11 @@ df['exam_proximity_category'] = ''
 semana_start = pd.to_datetime(semana_santa[0])
 semana_end = pd.to_datetime(semana_santa[1])
 
-print("Processing exam features...")
 
-# Process by university
 for university in [1, 2]:
     university_mask = df['university'] == university
     exam_list = university_1_exams if university == 1 else university_2_exams
     
-    print(f"Processing University {university} students...")
     
     for idx in df[university_mask].index:
         current_date = df.at[idx, DATE_COL]
@@ -89,7 +84,6 @@ for university in [1, 2]:
                 df.at[idx, 'exam_proximity_category'] = 'exam_week'
                 break
         
-        # Calculate days to next exam
         future_exams = []
         for exam_start, exam_end, exam_name in exam_list:
             exam_start_dt = pd.to_datetime(exam_start)
@@ -110,7 +104,6 @@ for university in [1, 2]:
                 else:
                     df.at[idx, 'exam_proximity_category'] = 'normal'
         
-        # Calculate days since last exam
         past_exams = []
         for exam_start, exam_end, exam_name in exam_list:
             exam_end_dt = pd.to_datetime(exam_end)

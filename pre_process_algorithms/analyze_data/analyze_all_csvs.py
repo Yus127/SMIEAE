@@ -19,7 +19,6 @@ CSV_FILES = {
 }
 
 OUTPUT_DIR = "/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/analyzed"
-import os
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────

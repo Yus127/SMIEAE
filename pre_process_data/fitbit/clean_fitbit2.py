@@ -306,7 +306,6 @@ def process_csv_file(input_path, output_dir="processed_data"):
         'heart_rate_activity_heart rate trigger value beats per minute'
     ]
     
-    # Read the CSV with low_memory=False to avoid dtype warnings
     df = pd.read_csv(input_path, low_memory=False)
     
     # Remove unwanted columns if they exist
@@ -344,7 +343,6 @@ def process_csv_file(input_path, output_dir="processed_data"):
             else:
                 timeseries_columns.append(col)
     
-    # Create output directory if it doesn't exist
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     
     # Get base filename without extension

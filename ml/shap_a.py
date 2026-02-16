@@ -67,7 +67,6 @@ if 'userid' not in df.columns:
 print(f" Features: {len(available_features)}")
 print(f" Users: {df['userid'].nunique()}")
 
-# Clean data
 df_clean = df[available_features + [primary_target, 'userid']].copy()
 df_clean = df_clean.dropna(subset=[primary_target])
 
@@ -331,7 +330,6 @@ print(f"   Baseline:               F1 = 0.358")
 print(f"   + User features:        F1 = 0.494 (+38%)")
 print(f"   + Temporal + Binary:    F1 = {best['test_f1']:.3f} ({(best['test_f1']-0.358)/0.358*100:+.0f}%)")
 
-# Save results
 comparison_df = pd.DataFrame([
     {'Model': name, **{k: v for k, v in res.items() if isinstance(v, (int, float))}}
     for name, res in results.items()

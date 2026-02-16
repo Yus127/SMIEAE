@@ -2,17 +2,14 @@ import pandas as pd
 import numpy as np
 import os
 
-# Define paths
 processed_dir = "/Users/YusMolina/Downloads/smieae/data/processed"
 output_dir = "/Users/YusMolina/Downloads/smieae/data/ml_ready"
 
-# Create output directory if it doesn't exist
 os.makedirs(output_dir, exist_ok=True)
 
 print("ML-READY DATASET GENERATOR (SEPARATE WINDOWS)")
 
 # Load the aggregated files
-print("\nStep 1: Loading aggregated data files...")
 
 agg_5min_path = os.path.join(processed_dir, "fitbit_5min_window_aggregated.csv")
 agg_10min_path = os.path.join(processed_dir, "fitbit_10min_window_aggregated.csv")

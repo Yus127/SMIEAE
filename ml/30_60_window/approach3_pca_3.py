@@ -746,7 +746,6 @@ for file_idx, file in enumerate(files):
                                    target_names=[f'Low {target_name}', f'Medium {target_name}', f'High {target_name}'],
                                    zero_division=0))
         
-        # Save results
         comparison_df = pd.DataFrame([
             {'Model': name, **{k: v for k, v in res.items() if isinstance(v, (int, float))}}
             for name, res in results.items()

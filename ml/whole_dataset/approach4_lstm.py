@@ -32,7 +32,6 @@ print("BI-LSTM BINARY CLASSIFICATION - MEDIAN SPLIT (ALL DATA)")
 print("Window: 3 timesteps | Split: Random 70/15/15 | Target: Median (no exclusions)")
 print("Using ALL data points for better generalization")
 
-print("\nLoading data...")
 df = pd.read_csv(INPUT_PATH)
 print(f" Loaded {len(df)} observations from {df['userid'].nunique()} users")
 

@@ -31,7 +31,6 @@ print("BI-LSTM BINARY CLASSIFICATION - MEDIAN SPLIT (TIME-BASED SPLIT)")
 print("Window: 3 timesteps | Split: Time-based 70/15/15 | Target: Median (no exclusions)")
 print("Using ALL data points with chronological split for time series")
 
-print("\nLoading data...")
 df = pd.read_csv(INPUT_PATH)
 print(f" Loaded {len(df)} observations from {df['userid'].nunique()} users")
 

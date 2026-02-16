@@ -261,7 +261,6 @@ def consolidate_user_data(download_folder, output_file):
     for folder_name, process_func in folders.items():
         folder_path = os.path.join(download_folder, folder_name)
         if os.path.exists(folder_path):
-            print(f"    Processing {folder_name}...")
             dfs = process_func(folder_path)
             all_dfs.extend(dfs)
             del dfs

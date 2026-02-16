@@ -86,7 +86,6 @@ class StressAnxietyOCSVM:
         """
         Fit the One-Class SVM model
         """
-        print(f"Preparing features...")
         X = self.prepare_features(df)
         
         # Handle missing values
@@ -96,12 +95,9 @@ class StressAnxietyOCSVM:
         print(f"Number of samples: {len(X)}")
         
         # Scale features (critical for SVM)
-        print("Scaling features...")
         X_scaled = self.scaler.fit_transform(X)
         
         # Fit One-Class SVM
-        print(f"Training One-Class SVM (nu={self.nu}, kernel={self.kernel})...")
-        print("Note: SVM training may take longer than Isolation Forest...")
         
         self.model = OneClassSVM(
             nu=self.nu,
@@ -343,13 +339,11 @@ def analyze_dataset(file_path, window_name, nu=0.1, kernel='rbf', output_dir=Non
     if output_dir is None:
         output_dir = '/Users/YusMolina/Downloads/smieae/results/anomaly_detection_ocsvm'
     
-    # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
     
     print("\n" + "="*100)
     print(f"ANALYZING: {window_name}")
     
-    # Load data
     df = pd.read_csv(file_path)
     print(f"\nDataset shape: {df.shape}")
     print(f"Columns: {df.columns.tolist()}")
@@ -376,7 +370,6 @@ def analyze_dataset(file_path, window_name, nu=0.1, kernel='rbf', output_dir=Non
     # Visualize
     detector.visualize_results(df, results_df, title_suffix=window_name, output_dir=output_dir)
     
-    # Save results
     output_file = os.path.join(output_dir, f'ocsvm_results_{window_name}.csv')
     results_df.to_csv(output_file, index=False)
     print(f"\nResults saved: {output_file}")

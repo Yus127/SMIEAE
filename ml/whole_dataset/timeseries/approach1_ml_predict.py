@@ -28,7 +28,6 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 print("MULTI-MODEL COMPARISON: STRESS & ANXIETY PREDICTION")
 print("TIME SERIES SPLIT (70% Train / 15% Val / 15% Test)")
 
-# Load data
 df = pd.read_csv(INPUT_PATH)
 print(f"\nDataset: {len(df)} rows, {len(df.columns)} columns")
 
@@ -98,7 +97,6 @@ def prepare_data_timeseries(df, target_col, feature_cols):
 
 # PREPARE DATA FOR BOTH TARGETS (TIME SERIES SPLIT)
 
-print("\nPreparing data with time series split...")
 X_train_s, X_val_s, X_test_s, y_train_s, y_val_s, y_test_s, p33_s, p67_s = prepare_data_timeseries(df, 'stress_level', feature_columns)
 X_train_a, X_val_a, X_test_a, y_train_a, y_val_a, y_test_a, p33_a, p67_a = prepare_data_timeseries(df, 'anxiety_level', feature_columns)
 
@@ -147,7 +145,6 @@ models = {
 
 # TRAIN ALL MODELS AND COLLECT PREDICTIONS
 
-print("\nTraining all models...")
 
 stress_results = {}
 anxiety_results = {}

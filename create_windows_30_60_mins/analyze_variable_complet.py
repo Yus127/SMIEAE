@@ -3,7 +3,6 @@ import numpy as np
 import os
 import glob
 
-# Define paths
 ml_dir = "/Users/YusMolina/Downloads/smieae/data/ml_ready"
 
 print("MOST COMPLETE VARIABLES ANALYSIS")

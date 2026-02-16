@@ -4,12 +4,10 @@ from datetime import datetime, timedelta
 import os
 import glob
 
-# Define paths
 fitbit_dir = "/Users/YusMolina/Downloads/smieae/data/original_data/fitbit/consolidated_output"
 ml_dir = "/Users/YusMolina/Downloads/smieae/data/ml_ready"
 output_dir = "/Users/YusMolina/Downloads/smieae/data/ml_ready/enriched"
 
-# Create output directory
 os.makedirs(output_dir, exist_ok=True)
 
 # User-course mapping
@@ -150,7 +148,6 @@ print("ENRICHING ML DATASETS WITH STEPS AND EXAM DATA")
 
 # EXTRACT DAILY STEPS FROM FITBIT DATA
 
-print("\nStep 1: Extracting daily step counts from Fitbit data...")
 
 # Find all Fitbit files
 fitbit_files = glob.glob(os.path.join(fitbit_dir, "user_*_consolidated.csv"))
@@ -168,7 +165,6 @@ for fitbit_file in fitbit_files:
         # Load Fitbit data
         df = pd.read_csv(fitbit_file, low_memory=False)
         
-        # Convert timestamp to datetime
         df['timestamp'] = pd.to_datetime(df['timestamp'], format='mixed', errors='coerce')
         df = df.dropna(subset=['timestamp'])
         
@@ -199,7 +195,6 @@ print(f"\n Extracted step data for {len(daily_steps_data)} users")
 # ENRICH ML DATASETS
 
 print("\n" + "="*70)
-print("Step 2: Enriching ML datasets...")
 
 # Find all ML-ready CSV files
 ml_files = [

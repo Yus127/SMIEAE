@@ -50,7 +50,6 @@ def read_sensor_data(base_path):
                 file_path = os.path.join(root, file)
                 
                 try:
-                    # Read the CSV file
                     df = pd.read_csv(file_path)
                     
                     # Determine sensor category
@@ -125,7 +124,6 @@ def main():
     save_combined = input("\nSave combined data to CSV files? (y/n): ")
     
     if save_combined.lower() == 'y':
-        # Create output directory if it doesn't exist
         os.makedirs(output_path, exist_ok=True)
         
         for sensor_type, df in data.items():

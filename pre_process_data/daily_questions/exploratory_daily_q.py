@@ -66,7 +66,6 @@ def main() -> int:
 
     df = pd.read_csv(in_path)
 
-    # Parse timestamps
     if "timestamp" not in df.columns:
         raise SystemExit("Missing 'timestamp' column in cleaned CSV.")
     df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")

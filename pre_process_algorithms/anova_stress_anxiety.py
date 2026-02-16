@@ -28,9 +28,7 @@ except Exception as e:
 
 print(f"{MODEL_TYPE} PREDICTION: STRESS & ANXIETY LEVELS")
 
-# LOAD DATA
 
-print("\nLoading ML-ready dataset...")
 df = pd.read_csv('/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/ml_ready_dataset_transformed.csv')
 
 print(f" Dataset loaded: {df.shape}")
@@ -39,7 +37,6 @@ print(f"  Columns: {df.shape[1]}")
 
 # PREPARE FEATURES AND TARGETS
 
-print("\nPreparing features and targets...")
 
 # Separate features and targets
 X = df.drop(['stress_level', 'anxiety_level'], axis=1)
@@ -62,7 +59,6 @@ if missing_cols:
 
 # HANDLE MISSING DATA
 
-print("\nHandling missing data...")
 
 # Use median imputation for numerical features
 imputer = SimpleImputer(strategy='median')
@@ -75,9 +71,7 @@ X_imputed = pd.DataFrame(
 print(f" Missing data imputed using median strategy")
 print(f"  Remaining missing values: {X_imputed.isna().sum().sum()}")
 
-# SPLIT DATA
 
-print("\nSplitting data into train/test sets...")
 
 # Split for stress prediction
 X_train_stress, X_test_stress, y_train_stress, y_test_stress = train_test_split(
@@ -99,7 +93,6 @@ print(f"  Testing: {X_test_anxiety.shape[0]} samples")
 
 # TRAIN XGBOOST MODELS
 
-print("\nTraining models...")
 
 # Create models based on what's available
 if MODEL_TYPE == 'XGBoost':
@@ -146,18 +139,14 @@ else:  # GradientBoosting
     model_anxiety = GradientBoostingRegressor(**params)
 
 # Train stress model
-print("\n  Training STRESS model...")
 model_stress.fit(X_train_stress, y_train_stress)
 print("   Stress model trained")
 
 # Train anxiety model
-print("  Training ANXIETY model...")
 model_anxiety.fit(X_train_anxiety, y_train_anxiety)
 print("   Anxiety model trained")
 
-# MAKE PREDICTIONS
 
-print("\nMaking predictions...")
 
 # Stress predictions
 y_pred_stress_train = model_stress.predict(X_train_stress)
@@ -171,7 +160,6 @@ print(" Predictions completed")
 
 # EVALUATE MODELS
 
-print("\nEvaluating model performance...")
 
 def evaluate_regression(y_true, y_pred, dataset_name):
     """Calculate regression metrics"""
@@ -225,7 +213,6 @@ print(f"  Difference: {anxiety_overfit:.4f} {'  (overfitting)' if anxiety_overfi
 
 # FEATURE IMPORTANCE
 
-print("\nAnalyzing feature importance...")
 
 # Get feature importance based on model type
 if MODEL_TYPE == 'GradientBoosting':
@@ -332,7 +319,6 @@ plt.show()
 
 print(f" Saved visualization: {output_plot}")
 
-# SAVE RESULTS
 
 print("\n" + "="*80)
 print("SAVING RESULTS")

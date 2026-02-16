@@ -5,18 +5,14 @@ import os
 import glob
 import warnings
 
-# Suppress the DtypeWarning
 warnings.filterwarnings('ignore', category=pd.errors.DtypeWarning)
 
-# Define paths
 fitbit_dir = "/Users/YusMolina/Downloads/smieae/data/original_data/fitbit/consolidated_output"
 questionnaire_path = "/Users/YusMolina/Downloads/smieae/data/data_clean/daily_questions_cleaned.csv"
 output_dir = "/Users/YusMolina/Downloads/smieae/data/processed/5_10min"
 
-# Create output directory if it doesn't exist
 os.makedirs(output_dir, exist_ok=True)
 
-# Columns to delete from Fitbit data
 columns_to_delete = [
     'stress_score_UPDATED_AT',
     'stress_score_STRESS_SCORE',
@@ -30,7 +26,6 @@ columns_to_delete = [
     'stress_score_CALCULATION_FAILED'
 ]
 
-# Define numerical columns for aggregation
 numerical_cols = [
     'oxygen_variation_Infrared to Red Signal Ratio',
     'heart_rate_global_value',
@@ -61,19 +56,16 @@ def parse_timestamp_flexible(timestamp_series):
     Parse timestamps with flexible formatting to handle various formats including nanoseconds
     """
     try:
-        # Try standard parsing first
         return pd.to_datetime(timestamp_series, format='mixed', errors='coerce')
     except:
         pass
     
     try:
-        # Try ISO8601 format
         return pd.to_datetime(timestamp_series, format='ISO8601', errors='coerce')
     except:
         pass
     
     try:
-        # If that fails, try without format specification
         return pd.to_datetime(timestamp_series, errors='coerce')
     except Exception as e:
         print(f"     Warning: Some timestamps could not be parsed: {e}")
@@ -81,17 +73,13 @@ def parse_timestamp_flexible(timestamp_series):
 
 print("FITBIT-QUESTIONNAIRE DATA MERGER (ROBUST VERSION)")
 
-print("\nStep 1: Loading questionnaire data...")
 questionnaire_df = pd.read_csv(questionnaire_path)
 
-# Convert timestamp to datetime with flexible parsing
 questionnaire_df['timestamp'] = parse_timestamp_flexible(questionnaire_df['timestamp'])
 questionnaire_df['date_only'] = pd.to_datetime(questionnaire_df['date_only'], errors='coerce')
 
-# Normalize userid to string
 questionnaire_df['userid'] = questionnaire_df['userid'].astype(str)
 
-# Remove any rows where timestamp parsing failed
 original_count = len(questionnaire_df)
 questionnaire_df = questionnaire_df.dropna(subset=['timestamp', 'date_only'])
 if len(questionnaire_df) < original_count:
@@ -100,20 +88,15 @@ if len(questionnaire_df) < original_count:
 print(f" Loaded {len(questionnaire_df)} questionnaire responses")
 print(f" Users in questionnaire: {sorted(questionnaire_df['userid'].unique())}")
 
-# Find all consolidated Fitbit files
-print("\nStep 2: Finding Fitbit files...")
 fitbit_files = glob.glob(os.path.join(fitbit_dir, "user_*_consolidated.csv"))
 print(f" Found {len(fitbit_files)} Fitbit files")
 
-# Extract userids from filenames and create mapping
-print("\nStep 3: Analyzing userid formats...")
 fitbit_userid_map = {}
 for fitbit_file in fitbit_files:
     filename = os.path.basename(fitbit_file)
     # Extract the original userid from filename (e.g., "1" from "user_1_consolidated.csv")
     user_id_original = filename.replace('user_', '').replace('_consolidated.csv', '')
     
-    # Try multiple format conversions
     user_id_as_is = user_id_original
     user_id_int = str(int(user_id_original))  # Remove leading zeros
     user_id_padded = user_id_original.zfill(2)  # Add leading zero if needed
@@ -125,7 +108,6 @@ for fitbit_file in fitbit_files:
         'padded': user_id_padded
     }
 
-# Create a reverse mapping: questionnaire userid -> fitbit file
 quest_to_fitbit_map = {}
 questionnaire_users = set(questionnaire_df['userid'].unique())
 
@@ -148,7 +130,6 @@ unmatched_users = questionnaire_users - set(quest_to_fitbit_map.keys())
 if unmatched_users:
     print(f" Questionnaire users without Fitbit data: {sorted(unmatched_users)}")
 
-# Initialize lists to store results
 results_5min_detailed = []
 results_10min_detailed = []
 results_5min_aggregated = []
@@ -157,32 +138,25 @@ results_10min_aggregated = []
 print("\n" + "="*70)
 print("PROCESSING DATA")
 
-# Track statistics
 total_responses_processed = 0
 total_responses_with_data = 0
 users_processed = 0
 users_with_errors = []
 
-# Process each questionnaire user
 for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
     print(f"\nProcessing user {quest_userid}...")
     print(f"  Fitbit file: {os.path.basename(fitbit_file)}")
     
     try:
-        # Load Fitbit data with low_memory=False to avoid DtypeWarning
         fitbit_df = pd.read_csv(fitbit_file, low_memory=False)
         
-        # Convert timestamp to datetime with flexible parsing
-        print(f"  Parsing timestamps...")
         fitbit_df['timestamp'] = parse_timestamp_flexible(fitbit_df['timestamp'])
         
-        # Remove rows where timestamp parsing failed
         original_fitbit_count = len(fitbit_df)
         fitbit_df = fitbit_df.dropna(subset=['timestamp'])
         if len(fitbit_df) < original_fitbit_count:
             print(f"   Removed {original_fitbit_count - len(fitbit_df)} rows with invalid timestamps")
         
-        # Delete specified columns if they exist
         cols_to_drop = [col for col in columns_to_delete if col in fitbit_df.columns]
         if cols_to_drop:
             fitbit_df = fitbit_df.drop(columns=cols_to_drop)
@@ -190,7 +164,6 @@ for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
         
         print(f"   Loaded {len(fitbit_df):,} valid Fitbit records")
         
-        # Get questionnaire responses for this user
         user_questions = questionnaire_df[questionnaire_df['userid'] == quest_userid].copy()
         
         if len(user_questions) == 0:
@@ -199,7 +172,6 @@ for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
             
         print(f"   Found {len(user_questions)} questionnaire responses")
         
-        # Process each questionnaire response
         response_count = 0
         responses_with_data = 0
         
@@ -208,11 +180,9 @@ for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
             response_date = question_row['date_only']
             total_responses_processed += 1
             
-            # Calculate time windows
             time_5min_before = response_time - timedelta(minutes=5)
             time_10min_before = response_time - timedelta(minutes=10)
             
-            # Filter Fitbit data for the same date
             fitbit_same_date = fitbit_df[fitbit_df['timestamp'].dt.date == response_date.date()].copy()
             
             if len(fitbit_same_date) == 0:
@@ -232,7 +202,6 @@ for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
             
             # Process 5-minute window
             if len(fitbit_5min) > 0:
-                # Detailed records
                 fitbit_5min_detail = fitbit_5min.copy()
                 for col in question_row.index:
                     if col not in ['timestamp']:
@@ -243,7 +212,6 @@ for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
                 fitbit_5min_detail['window_end'] = response_time
                 results_5min_detailed.append(fitbit_5min_detail)
                 
-                # Aggregated statistics
                 agg_dict = {
                     'userid': quest_userid, 
                     'response_timestamp': response_time, 
@@ -252,12 +220,10 @@ for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
                     'record_count': len(fitbit_5min)
                 }
                 
-                # Add questionnaire data
                 for col in question_row.index:
                     if col not in ['timestamp']:
                         agg_dict[f'q_{col}'] = question_row[col]
                 
-                # Calculate statistics for numerical columns
                 for col in fitbit_5min.columns:
                     if col in numerical_cols:
                         try:
@@ -277,7 +243,6 @@ for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
             
             # Process 1-hour window
             if len(fitbit_10min) > 0:
-                # Detailed records
                 fitbit_10min_detail = fitbit_10min.copy()
                 for col in question_row.index:
                     if col not in ['timestamp']:
@@ -288,7 +253,6 @@ for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
                 fitbit_10min_detail['window_end'] = response_time
                 results_10min_detailed.append(fitbit_10min_detail)
                 
-                # Aggregated statistics
                 agg_dict = {
                     'userid': quest_userid,
                     'response_timestamp': response_time,
@@ -297,12 +261,10 @@ for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
                     'record_count': len(fitbit_10min)
                 }
                 
-                # Add questionnaire data
                 for col in question_row.index:
                     if col not in ['timestamp']:
                         agg_dict[f'q_{col}'] = question_row[col]
                 
-                # Calculate statistics for numerical columns
                 for col in fitbit_10min.columns:
                     if col in numerical_cols:
                         try:
@@ -344,7 +306,6 @@ for quest_userid, fitbit_file in sorted(quest_to_fitbit_map.items()):
         traceback.print_exc()
         continue
 
-# Save results
 print("\n" + "="*70)
 print("PROCESSING SUMMARY")
 print(f"Users processed successfully: {users_processed}/{len(quest_to_fitbit_map)}")
@@ -356,7 +317,6 @@ if users_with_errors:
 print("\n" + "="*70)
 print("SAVING RESULTS")
 
-# Detailed data
 if results_5min_detailed:
     final_5min_detailed = pd.concat(results_5min_detailed, ignore_index=True)
     output_file = os.path.join(output_dir, "fitbit_5min_window_detailed.csv")
@@ -379,7 +339,6 @@ if results_10min_detailed:
 else:
     print("\n No data for 1-hour window")
 
-# Aggregated data
 if results_5min_aggregated:
     final_5min_agg = pd.DataFrame(results_5min_aggregated)
     output_file = os.path.join(output_dir, "fitbit_5min_window_aggregated.csv")
@@ -396,7 +355,6 @@ if results_10min_aggregated:
     print(f"  Rows: {len(final_10min_agg)} (one per questionnaire response)")
     print(f"  Users: {final_10min_agg['userid'].nunique()}")
 
-# Combined detailed data
 if results_5min_detailed and results_10min_detailed:
     combined_detailed = pd.concat([final_5min_detailed, final_10min_detailed], ignore_index=True)
     output_file = os.path.join(output_dir, "fitbit_combined_windows_detailed.csv")

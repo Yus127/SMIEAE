@@ -33,7 +33,6 @@ def analyze_completeness(input_dir, output_file="data_completeness_report.csv", 
             # Extract user identifier from filename
             user_id = csv_file.stem.replace('_consolidated_daily_summary', '').replace('_daily_summary', '')
             
-            # Read the CSV
             df = pd.read_csv(csv_file)
             
             # Store total rows for this user

@@ -74,7 +74,6 @@ class StressAnxietyAnomalyDetector:
         """
         Fit the Isolation Forest model
         """
-        print(f"Preparing features...")
         X = self.prepare_features(df)
         
         # Handle missing values
@@ -84,11 +83,9 @@ class StressAnxietyAnomalyDetector:
         print(f"Number of samples: {len(X)}")
         
         # Scale features
-        print("Scaling features...")
         X_scaled = self.scaler.fit_transform(X)
         
         # Fit Isolation Forest
-        print(f"Training Isolation Forest (contamination={self.contamination})...")
         self.model = IsolationForest(
             contamination=self.contamination,
             random_state=self.random_state,
@@ -194,7 +191,6 @@ class StressAnxietyAnomalyDetector:
         if output_dir is None:
             output_dir = '/Users/YusMolina/Downloads/smieae/results/anomaly_detection'
         
-        import os
         os.makedirs(output_dir, exist_ok=True)
         
         fig = plt.figure(figsize=(20, 12))
@@ -301,14 +297,11 @@ def analyze_dataset(file_path, window_name, contamination=0.1, output_dir=None):
     if output_dir is None:
         output_dir = '/Users/YusMolina/Downloads/smieae/results/anomaly_detection'
     
-    # Create output directory if it doesn't exist
-    import os
     os.makedirs(output_dir, exist_ok=True)
     
     print("\n" + "="*100)
     print(f"ANALYZING: {window_name}")
     
-    # Load data
     df = pd.read_csv(file_path)
     print(f"\nDataset shape: {df.shape}")
     print(f"Columns: {df.columns.tolist()}")
@@ -335,7 +328,6 @@ def analyze_dataset(file_path, window_name, contamination=0.1, output_dir=None):
     # Visualize
     detector.visualize_results(df, results_df, title_suffix=window_name, output_dir=output_dir)
     
-    # Save results
     output_file = os.path.join(output_dir, f'anomaly_results_{window_name}.csv')
     results_df.to_csv(output_file, index=False)
     print(f"\nResults saved: {output_file}")
@@ -370,7 +362,6 @@ def main():
     
     # Set output directory
     output_dir = '/Users/YusMolina/Downloads/smieae/results/anomaly_detection'
-    import os
     os.makedirs(output_dir, exist_ok=True)
     print(f"\nOutput directory: {output_dir}\n")
     

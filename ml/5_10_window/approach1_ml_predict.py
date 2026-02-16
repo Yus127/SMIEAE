@@ -57,7 +57,6 @@ for file_idx, file in enumerate(files):
     os.makedirs(os.path.join(window_output_dir, "plots"), exist_ok=True)
     os.makedirs(os.path.join(window_output_dir, "shap"), exist_ok=True)
     
-    # Load data
     print(f"\n1. LOADING DATA ({window_type})")
     print("-"*80)
     

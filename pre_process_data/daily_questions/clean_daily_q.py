@@ -97,7 +97,6 @@ def main() -> int:
     ]
     df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors="ignore")
 
-    # Sort and export
     df = df.sort_values(["userid", "timestamp"])
     out_path = out_dir / CLEANED_FILENAME
     df.to_csv(out_path, index=False)

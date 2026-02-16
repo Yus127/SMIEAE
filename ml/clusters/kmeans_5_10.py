@@ -100,7 +100,6 @@ for file_idx, file in enumerate(files):
     print(f"\n2. DATA PREPARATION ({window_type})")
     print("-"*80)
     
-    # Clean data
     cols_to_keep = available_features + ['userid']
     if stress_target:
         cols_to_keep.append(stress_target)

@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
 
-# Configuration
 input_file = "/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/combined_daily_data.csv"  # Output from previous script
 output_folder = "/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/correlation_results_combined"
 

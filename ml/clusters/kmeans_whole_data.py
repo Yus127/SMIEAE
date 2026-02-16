@@ -123,7 +123,6 @@ if anxiety_target:
 print(f"\n3. DATA PREPARATION")
 print("-"*80)
 
-# Clean data
 cols_to_keep = available_features + ['userid']
 if stress_target:
     cols_to_keep.append(stress_target)

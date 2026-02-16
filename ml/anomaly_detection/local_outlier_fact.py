@@ -88,7 +88,6 @@ class StressAnxietyLOF:
         """
         Fit the LOF model
         """
-        print(f"Preparing features...")
         X = self.prepare_features(df)
         
         # Handle missing values
@@ -98,11 +97,9 @@ class StressAnxietyLOF:
         print(f"Number of samples: {len(X)}")
         
         # Scale features (important for distance-based algorithms)
-        print("Scaling features...")
         X_scaled = self.scaler.fit_transform(X)
         
         # Fit LOF
-        print(f"Training Local Outlier Factor (contamination={self.contamination}, n_neighbors={self.n_neighbors})...")
         
         self.model = LocalOutlierFactor(
             contamination=self.contamination,
@@ -341,13 +338,11 @@ def analyze_dataset(file_path, window_name, contamination=0.1, n_neighbors=20, o
     if output_dir is None:
         output_dir = '/Users/YusMolina/Downloads/smieae/results/anomaly_detection_lof'
     
-    # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
     
     print("\n" + "="*100)
     print(f"ANALYZING: {window_name}")
     
-    # Load data
     df = pd.read_csv(file_path)
     print(f"\nDataset shape: {df.shape}")
     
@@ -373,7 +368,6 @@ def analyze_dataset(file_path, window_name, contamination=0.1, n_neighbors=20, o
     # Visualize
     detector.visualize_results(df, results_df, title_suffix=window_name, output_dir=output_dir)
     
-    # Save results
     output_file = os.path.join(output_dir, f'lof_results_{window_name}.csv')
     results_df.to_csv(output_file, index=False)
     print(f"\nResults saved: {output_file}")

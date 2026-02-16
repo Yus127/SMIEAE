@@ -23,8 +23,6 @@ os.makedirs('/Users/YusMolina/Downloads/smieae/results/whole_dataset/random_spli
 print("3-CLASS CLASSIFICATION - STRONGLY REGULARIZED")
 print("Train: 70% | Validation: 15% | Test: 15%")
 
-# Load data
-print("\nLoading data...")
 df = pd.read_csv(INPUT_PATH)
 print(f"Dataset loaded: {len(df)} rows, {len(df.columns)} columns")
 
@@ -421,7 +419,6 @@ print("BEST MODELS (by validation accuracy)")
 print(f"\nStress:  {best_stress[0]} - Val:{best_stress[1]['val_accuracy']:.4f} Test:{best_stress[1]['test_accuracy']:.4f}")
 print(f"Anxiety: {best_anxiety[0]} - Val:{best_anxiety[1]['val_accuracy']:.4f} Test:{best_anxiety[1]['test_accuracy']:.4f}")
 
-# Save results
 results_df = pd.DataFrame({
     'Model': list(stress_results.keys()),
     'Stress_Train': [v['train_accuracy'] for v in stress_results.values()],

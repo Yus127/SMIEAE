@@ -3,7 +3,6 @@ import numpy as np
 import glob
 from pathlib import Path
 
-# Configuration
 daily_summaries_folder = "/Users/YusMolina/Downloads/smieae/data/data_clean/fitbit"  # Folder with *_consolidated_daily_summary.csv files
 daily_questions_file = "/Users/YusMolina/Downloads/smieae/data/data_clean/daily_questions_cleaned.csv"  # Path to the questions file
 output_file = "/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/combined_daily_data.csv"
@@ -314,7 +313,6 @@ columns_to_remove = [
     'merge_date'  # temporary merge column
 ]
 
-# Configuration
 daily_summaries_folder = "/Users/YusMolina/Downloads/smieae/data/data_clean/fitbit"  # Folder with *_consolidated_daily_summary.csv files
 daily_questions_file = "/Users/YusMolina/Downloads/smieae/data/data_clean/daily_questions_cleaned.csv"  # Path to the questions file
 output_file = "/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/combined_daily_data.csv"

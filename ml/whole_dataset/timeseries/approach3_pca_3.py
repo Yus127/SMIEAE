@@ -24,8 +24,6 @@ os.makedirs('/Users/YusMolina/Downloads/smieae/results/whole_dataset/timeseries/
 print("3-CLASS CLASSIFICATION - STRONGLY REGULARIZED")
 print("Train: 70% | Validation: 15% | Test: 15% (TIME SERIES SPLIT)")
 
-# Load data
-print("\nLoading data...")
 df = pd.read_csv(INPUT_PATH)
 print(f"Dataset loaded: {len(df)} rows, {len(df.columns)} columns")
 
@@ -312,7 +310,6 @@ def train_evaluate_models(X_train, X_val, X_test, y_train, y_val, y_test, target
         voting='soft'
     )
     
-    print("\nTraining ensemble...")
     voting_clf.fit(X_train, y_train)
     
     # Predictions
@@ -594,7 +591,6 @@ print(f"  Test Recall:         {best_anxiety[1]['test_recall']:.4f}")
 print(f"  Test F1:             {best_anxiety[1]['test_f1']:.4f}")
 print(f"  Test ROC AUC:        {best_anxiety[1]['test_roc_auc']:.4f}")
 
-# Save results
 results_df = pd.DataFrame({
     'Model': list(stress_results.keys()),
     'Stress_Train_Acc': [v['train_accuracy'] for v in stress_results.values()],

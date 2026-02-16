@@ -206,11 +206,9 @@ def aggregate_all_users():
     total_records = 0
     date_ranges = []
     
-    print("Loading all user data...")
     
     for csv_file in csv_files:
         user_name = csv_file.stem.replace('_consolidated', '')
-        print(f"  Processing {user_name}...")
         
         try:
             df = pd.read_csv(csv_file, low_memory=False)
@@ -404,7 +402,6 @@ def main():
         return
     
     print(f"Found {len(csv_files)} consolidated CSV files")
-    print("\nProcessing files...")
     
     # Analyze each user's data
     for csv_file in csv_files:

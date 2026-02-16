@@ -24,15 +24,12 @@ os.makedirs('/Users/YusMolina/Downloads/smieae/results/whole_dataset/random_spli
 print("BINARY CLASSIFICATION WITH CLUSTERING AND ADVANCED FEATURES")
 print("Train: 70% | Validation: 15% | Test: 15%")
 
-# Load data
-print("\nLoading data...")
 df = pd.read_csv(INPUT_PATH)
 print(f"Dataset loaded: {len(df)} rows, {len(df.columns)} columns")
 
 # CREATE USER CLUSTERS (K=2) BASED ON PHYSIOLOGICAL PROFILES
 
 print("\n" + "="*80)
-print("STEP 1: CREATING USER CLUSTERS (K=2)")
 
 # Features for clustering (physiological only, no stress/anxiety to avoid leakage)
 clustering_features = [
@@ -74,7 +71,6 @@ df = df.merge(user_profiles[['userid', 'user_cluster']], on='userid', how='left'
 # ADVANCED FEATURE ENGINEERING
 
 print("\n" + "="*80)
-print("STEP 2: ADVANCED FEATURE ENGINEERING")
 
 # Calculate personal baselines for each user
 print("\nCalculating personal baselines...")
@@ -370,7 +366,6 @@ def train_evaluate_binary_models(X_train, X_val, X_test, y_train, y_val, y_test,
         voting='soft'
     )
     
-    print("\nTraining ensemble...")
     voting_clf.fit(X_train, y_train)
     
     # Predict
@@ -554,7 +549,6 @@ print(f"Anxiety ROC curve: {ROC_ANXIETY_PATH}")
 print("\n" + "="*80)
 print("ANALYSIS COMPLETE")
 
-# Save results
 results_df = pd.DataFrame({
     'Model': list(stress_results.keys()),
     'Stress_Val_Acc': [v['val_accuracy'] for v in stress_results.values()],

@@ -56,7 +56,6 @@ def main() -> int:
     if "timestamp_for_day" not in df.columns:
         raise SystemExit("Missing 'timestamp_for_day' column in cleaned dataset.")
 
-    # Parse timestamps
     df["timestamp_for_day"] = pd.to_datetime(df["timestamp_for_day"], errors="coerce")
     df["date_only"] = df["timestamp_for_day"].dt.date
 

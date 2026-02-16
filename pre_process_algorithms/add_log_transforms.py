@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 
-# Configuration
 INPUT_PATH = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/combined_daily_data.csv'
 OUTPUT_PATH = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/combined_daily_data_with_log_transforms.csv'
 
