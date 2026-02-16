@@ -8,8 +8,8 @@ import glob
 """AHORA DEBO VER SI HAY CORRELACIÓN ENTRE LAS VAIABLES Y LOS OBJETIVOS """
 
 # Configuration
-csv_folder = "/Users/YusMolina/Downloads/smieae/data/data_clean/fitbit"  # Change this to your folder path
-output_folder = "/Users/YusMolina/Downloads/smieae/data/data_clean/fitbit/correlationResults"  # Folder to save results
+csv_folder = "/Users/YusMolina/Downloads/smieae/data/data_clean/fitbit"
+output_folder = "/Users/YusMolina/Downloads/smieae/data/data_clean/fitbit/correlationResults"
 
 import pandas as pd
 import numpy as np
@@ -52,7 +52,6 @@ df = load_all_csvs(csv_folder)
 # Display basic information
 print("\n" + "="*50)
 print("DATASET OVERVIEW")
-print("="*50)
 print(df.info())
 print("\n")
 print(df.describe())
@@ -154,7 +153,6 @@ if not strong_corr_df.empty:
     
     print("\n" + "="*50)
     print("STRONG CORRELATIONS (|r| > 0.7)")
-    print("="*50)
     print(strong_corr_df.to_string(index=False))
 else:
     print("\nNo strong correlations (|r| > 0.7) found")
@@ -184,8 +182,6 @@ if not strong_corr_df.empty and len(strong_corr_df) > 0:
 
 
 print("\n" + "="*50)
-print("ANALYSIS COMPLETE!")
-print("="*50)
 print(f"All results saved to '{output_folder}' folder")
 print("\nGenerated files:")
 print("1. correlation_matrix.csv - Full correlation matrix")

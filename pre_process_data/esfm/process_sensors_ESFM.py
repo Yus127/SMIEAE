@@ -73,10 +73,10 @@ def read_sensor_data(base_path):
                     
                     sensor_data[sensor_category].append(df)
                     
-                    print(f"✓ Loaded: {file} → {sensor_category}")
+                    print(f" Loaded: {file} → {sensor_category}")
                     
                 except Exception as e:
-                    print(f"✗ Error reading {file}: {e}")
+                    print(f" Error reading {file}: {e}")
     
     # Combine dataframes for each sensor type
     combined_data = {}
@@ -93,17 +93,14 @@ def read_sensor_data(base_path):
     return combined_data
 
 def main():
-    # Set your base directory path here (where month folders are located)
-    base_path = '/Users/YusMolina/Downloads/smieae/data/original_data/ESFM'  # Current directory, change as needed
-    output_path = '/Users/YusMolina/Downloads/smieae/data/data_clean/ESFM'  # Current directory, change as needed
+    base_path = '/Users/YusMolina/Downloads/smieae/data/original_data/ESFM'
+    output_path = '/Users/YusMolina/Downloads/smieae/data/data_clean/ESFM'
     
     print("Reading sensor data...")
-    print("=" * 60)
     
     # Read all sensor data
     data = read_sensor_data(base_path)
     
-    print("=" * 60)
     print(f"\nSummary:")
     print("-" * 60)
     
@@ -119,13 +116,11 @@ def main():
     # Display sample data for each sensor type
     print("\n" + "=" * 60)
     print("Sample Data:")
-    print("=" * 60)
     
     for sensor_type, df in data.items():
         print(f"\n--- {sensor_type} ---")
         print(df.head(3))
     
-    # Optional: Save combined data to new CSV files
     print("\n" + "=" * 60)
     save_combined = input("\nSave combined data to CSV files? (y/n): ")
     
@@ -139,7 +134,7 @@ def main():
             output_file = os.path.join(output_path, f'combined_{filename}.csv')
             
             df.to_csv(output_file, index=False)
-            print(f"✓ Saved: {output_file}")
+            print(f" Saved: {output_file}")
         
         print(f"\nAll files saved to: {output_path}")
     

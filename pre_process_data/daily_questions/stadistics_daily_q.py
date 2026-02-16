@@ -42,9 +42,7 @@ def check_date_continuity_single_user(df, user_id):
     missing_days = total_days_in_range - days_with_responses
     completion_rate = (days_with_responses / total_days_in_range) * 100
     
-    print("=" * 80)
     print("1. BASIC STATISTICS")
-    print("=" * 80)
     print(f"First response: {start_date}")
     print(f"Last response: {end_date}")
     print(f"Total days in range: {total_days_in_range}")
@@ -68,7 +66,6 @@ def check_date_continuity_single_user(df, user_id):
     # Find missing dates
     print(f"\n{'=' * 80}")
     print("2. MISSING DATES ANALYSIS")
-    print("=" * 80)
     
     if missing_days > 0:
         # Generate complete date range
@@ -86,7 +83,6 @@ def check_date_continuity_single_user(df, user_id):
         # Analyze missing date patterns
         print(f"\n{'=' * 80}")
         print("3. MISSING DATE PATTERNS")
-        print("=" * 80)
         
         # Missing days by weekday
         missing_weekdays = [pd.Timestamp(date).day_name() for date in missing_dates]
@@ -132,7 +128,6 @@ def check_date_continuity_single_user(df, user_id):
         # Calculate longest streak of consecutive responses
         print(f"\n{'=' * 80}")
         print("4. RESPONSE STREAKS")
-        print("=" * 80)
         
         response_dates_sorted = sorted(response_dates)
         current_streak = 1
@@ -169,12 +164,11 @@ def check_date_continuity_single_user(df, user_id):
     # Summary statistics
     print(f"\n{'=' * 80}")
     print("5. SUMMARY")
-    print("=" * 80)
     print(f"Completion rate: {completion_rate:.2f}%")
     print(f"Response consistency: ", end="")
     
     if completion_rate == 100:
-        print("PERFECT ✓")
+        print("PERFECT ")
     elif completion_rate >= 90:
         print("EXCELLENT (≥90%)")
     elif completion_rate >= 75:
@@ -208,9 +202,7 @@ def analyze_continuity_per_user():
         print("Please update the csv_file path in the script.")
         return
     
-    print("="*80)
     print("DATE CONTINUITY ANALYSIS - PER USER")
-    print("="*80)
     print(f"Analyzing file: {csv_path.name}\n")
     
     try:
@@ -308,11 +300,10 @@ def analyze_continuity_per_user():
             output_dir = csv_path.parent
             output_file = output_dir / "date_continuity_summary_per_user.csv"
             summary_df.to_csv(output_file, index=False)
-            print(f"\n✓ Saved continuity summary to: {output_file}")
+            print(f"\n Saved continuity summary to: {output_file}")
         
         print("\n" + "="*80)
         print("ANALYSIS COMPLETE")
-        print("="*80)
         
     except Exception as e:
         print(f"Error processing file: {e}")

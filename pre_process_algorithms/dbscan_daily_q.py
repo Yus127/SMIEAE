@@ -5,8 +5,6 @@ from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Load your data
-# Replace 'your_file.csv' with your actual file path
 df = pd.read_csv('/Users/YusMolina/Downloads/smieae/data/data_clean/daily_questions_cleaned.csv')
 # Select the relevant columns for clustering
 features = ['i_stress_sliderNeutralPos', 'i_anxiety_sliderNeutralPos']
@@ -37,7 +35,6 @@ print(df['cluster'].value_counts().sort_index())
 # Per-user analysis
 print("\n" + "="*60)
 print("PER-USER CLUSTER ANALYSIS")
-print("="*60)
 
 for user_id in df['userid'].unique():
     user_data = df[df['userid'] == user_id]
@@ -52,7 +49,6 @@ for user_id in df['userid'].unique():
 # Statistics by cluster
 print("\n" + "="*60)
 print("CLUSTER STATISTICS")
-print("="*60)
 
 for cluster_id in sorted(df['cluster'].unique()):
     cluster_data = df[df['cluster'] == cluster_id]
@@ -68,7 +64,6 @@ for cluster_id in sorted(df['cluster'].unique()):
 fig, axes = plt.subplots(1, 2, figsize=(15, 6))
 
 
-# Optional: Save results to CSV
 df.to_csv('daily_questions_with_clusters.csv', index=False)
 print("\nResults saved to 'daily_questions_with_clusters.csv'")
 
@@ -188,7 +183,6 @@ print("\nSummary report saved to 'dbscan_clustering_summary.txt'")
 # Time-based analysis (optional)
 print("\n" + "="*60)
 print("TEMPORAL CLUSTER ANALYSIS")
-print("="*60)
 
 df['date_only'] = pd.to_datetime(df['date_only'])
 df = df.sort_values('date_only')

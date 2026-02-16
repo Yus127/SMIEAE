@@ -13,11 +13,9 @@ warnings.filterwarnings('ignore')
 plt.style.use('seaborn-v0_8-darkgrid')
 sns.set_palette("husl")
 
-print("="*80)
 print("USER CLUSTERING ANALYSIS - 2 CLUSTERS")
 print("PHYSIOLOGICAL & CONTEXTUAL FEATURES (NO TARGET LEAKAGE)")
 print("ANALYSIS OF JOINED DATASET")
-print("="*80)
 
 # Paths
 INPUT_PATH = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/data_with_exam_features.csv'
@@ -26,20 +24,18 @@ import os
 os.makedirs(output_dir, exist_ok=True)
 os.makedirs(os.path.join(output_dir, "plots"), exist_ok=True)
 
-# ========================================================================
 # 1. LOAD DATA
-# ========================================================================
 print(f"\n1. LOADING DATA")
 print("-"*80)
 print(f"Path: {INPUT_PATH}")
 
 if not os.path.exists(INPUT_PATH):
-    print(f"✗ File not found: {INPUT_PATH}")
+    print(f" File not found: {INPUT_PATH}")
     exit(1)
 
 df = pd.read_csv(INPUT_PATH)
-print(f"✓ Loaded {len(df)} observations")
-print(f"✓ Columns: {df.shape[1]}")
+print(f" Loaded {len(df)} observations")
+print(f" Columns: {df.shape[1]}")
 
 # Show available columns
 print(f"\nAvailable columns ({len(df.columns)} total):")
@@ -52,14 +48,12 @@ if len(df.columns) > 20:
 if 'userid' not in df.columns:
     if 'user_id' in df.columns:
         df['userid'] = df['user_id']
-        print("\n✓ Created 'userid' from 'user_id'")
+        print("\n Created 'userid' from 'user_id'")
     else:
         df['userid'] = 0
-        print("\n⚠ No user ID column found, assigning default value")
+        print("\n No user ID column found, assigning default value")
 
-# ========================================================================
 # 2. IDENTIFY AVAILABLE FEATURES
-# ========================================================================
 print(f"\n2. IDENTIFYING FEATURES")
 print("-"*80)
 
@@ -95,12 +89,12 @@ for col in df.columns:
             if col not in available_features:
                 available_features.append(col)
 
-print(f"\n✓ Found {len(available_features)} features:")
+print(f"\n Found {len(available_features)} features:")
 for feat in available_features:
     print(f"  • {feat}")
 
 if len(available_features) == 0:
-    print("\n✗ No suitable features found for clustering!")
+    print("\n No suitable features found for clustering!")
     print("Please check the dataset structure.")
     exit(1)
 
@@ -121,13 +115,11 @@ else:
     anxiety_target = anxiety_cols[0] if anxiety_cols else None
 
 if stress_target:
-    print(f"\n✓ Stress target: {stress_target}")
+    print(f"\n Stress target: {stress_target}")
 if anxiety_target:
-    print(f"✓ Anxiety target: {anxiety_target}")
+    print(f" Anxiety target: {anxiety_target}")
 
-# ========================================================================
 # 3. PREPARE DATA
-# ========================================================================
 print(f"\n3. DATA PREPARATION")
 print("-"*80)
 
@@ -150,14 +142,12 @@ for col in available_features:
         df_clean[col].fillna(median_val, inplace=True)
         print(f"  Imputed {col}: median={median_val:.2f}")
 
-print(f"\n✓ Clean dataset: {len(df_clean)} observations from {df_clean['userid'].nunique()} users")
+print(f"\n Clean dataset: {len(df_clean)} observations from {df_clean['userid'].nunique()} users")
 
-# ========================================================================
 # 4. CREATE USER PROFILES (NO TARGET LEAKAGE!)
-# ========================================================================
 print(f"\n4. CREATING USER PROFILES")
 print("-"*80)
-print("⚠️  IMPORTANT: Using ONLY physiological & contextual features")
+print("  IMPORTANT: Using ONLY physiological & contextual features")
 print("             NOT using stress or anxiety labels for clustering!")
 
 # Calculate user profiles ONLY from physiological/contextual features
@@ -213,9 +203,9 @@ user_profiles = user_profiles.rename(columns=col_mapping)
 original_count = len(user_feature_cols)
 user_feature_cols = list(dict.fromkeys(user_feature_cols))  # Remove duplicates while preserving order
 if len(user_feature_cols) < original_count:
-    print(f"\n⚠ Removed {original_count - len(user_feature_cols)} duplicate feature names")
+    print(f"\n Removed {original_count - len(user_feature_cols)} duplicate feature names")
 
-print(f"\n✓ Created user profiles with {len(user_feature_cols)} features:")
+print(f"\n Created user profiles with {len(user_feature_cols)} features:")
 for feat in user_feature_cols:
     print(f"  • {feat}")
 
@@ -224,17 +214,15 @@ if stress_target:
     user_stress = df_clean.groupby('userid')[stress_target].mean().reset_index()
     user_stress.columns = ['userid', 'avg_stress']
     user_profiles = user_profiles.merge(user_stress, on='userid', how='left')
-    print(f"\n✓ Calculated average stress per user (for visualization only)")
+    print(f"\n Calculated average stress per user (for visualization only)")
 
 if anxiety_target:
     user_anxiety = df_clean.groupby('userid')[anxiety_target].mean().reset_index()
     user_anxiety.columns = ['userid', 'avg_anxiety']
     user_profiles = user_profiles.merge(user_anxiety, on='userid', how='left')
-    print(f"✓ Calculated average anxiety per user (for visualization only)")
+    print(f" Calculated average anxiety per user (for visualization only)")
 
-# ========================================================================
 # 5. NORMALIZE USER FEATURES
-# ========================================================================
 print(f"\n5. NORMALIZING USER FEATURES")
 print("-"*80)
 
@@ -242,14 +230,12 @@ X_users = user_profiles[user_feature_cols].fillna(0)
 scaler_user = StandardScaler()
 X_users_scaled = scaler_user.fit_transform(X_users)
 
-print(f"✓ Normalized {X_users_scaled.shape[0]} users with {X_users_scaled.shape[1]} features")
+print(f" Normalized {X_users_scaled.shape[0]} users with {X_users_scaled.shape[1]} features")
 print(f"\nFeature statistics after normalization:")
 print(f"  Mean: {X_users_scaled.mean():.3f} (should be ~0)")
 print(f"  Std:  {X_users_scaled.std():.3f} (should be ~1)")
 
-# ========================================================================
 # 6. ELBOW METHOD
-# ========================================================================
 print(f"\n6. ELBOW METHOD ANALYSIS")
 print("-"*80)
 
@@ -290,12 +276,10 @@ axes[1].grid(True, alpha=0.3)
 plt.suptitle(f'Optimal Number of Clusters - Joined Dataset', fontsize=14, fontweight='bold')
 plt.tight_layout()
 plt.savefig(os.path.join(output_dir, 'plots', 'elbow_method.png'), dpi=300, bbox_inches='tight')
-print(f"\n✓ Saved: elbow_method.png")
+print(f"\n Saved: elbow_method.png")
 plt.close()
 
-# ========================================================================
 # 7. PERFORM CLUSTERING WITH K=2
-# ========================================================================
 print(f"\n7. K-MEANS CLUSTERING (k=2)")
 print("-"*80)
 
@@ -308,7 +292,7 @@ silhouette = silhouette_score(X_users_scaled, user_clusters)
 davies_bouldin = davies_bouldin_score(X_users_scaled, user_clusters)
 calinski_harabasz = calinski_harabasz_score(X_users_scaled, user_clusters)
 
-print(f"\n✓ Clustering completed with 2 clusters")
+print(f"\n Clustering completed with 2 clusters")
 print(f"\nClustering Quality Metrics:")
 print(f"  Silhouette Score:        {silhouette:.4f} (higher is better, range: -1 to 1)")
 print(f"  Davies-Bouldin Index:    {davies_bouldin:.4f} (lower is better)")
@@ -322,9 +306,7 @@ for cluster_id in range(2):
     cluster_sizes.append(n)
     print(f"  Cluster {cluster_id}: {n:3d} users ({pct:5.1f}%)")
 
-# ========================================================================
 # 8. CLUSTER CHARACTERISTICS
-# ========================================================================
 print(f"\n8. CLUSTER CHARACTERISTICS")
 print("-"*80)
 
@@ -363,7 +345,7 @@ cluster_summary_df = pd.DataFrame(cluster_profiles)
 
 # Check for duplicate columns and print warning
 if cluster_summary_df.columns.duplicated().any():
-    print("\n⚠ WARNING: Duplicate columns detected in cluster summary!")
+    print("\n WARNING: Duplicate columns detected in cluster summary!")
     duplicate_cols = cluster_summary_df.columns[cluster_summary_df.columns.duplicated()].tolist()
     print(f"  Duplicate columns: {duplicate_cols}")
     # Remove duplicate columns, keeping first occurrence
@@ -449,11 +431,9 @@ for i in range(len(cluster_summary_df)):
 
 # Save cluster summary
 cluster_summary_df.to_csv(os.path.join(output_dir, 'cluster_summary.csv'), index=False)
-print(f"\n✓ Saved: cluster_summary.csv")
+print(f"\n Saved: cluster_summary.csv")
 
-# ========================================================================
 # 9. PCA FOR VISUALIZATION
-# ========================================================================
 print(f"\n9. PCA FOR VISUALIZATION")
 print("-"*80)
 
@@ -469,18 +449,14 @@ print(f"  Total: {variance_explained.sum()*100:.1f}%")
 user_profiles['pca_1'] = X_pca_2d[:, 0]
 user_profiles['pca_2'] = X_pca_2d[:, 1]
 
-# ========================================================================
 # 10. VISUALIZATIONS
-# ========================================================================
 print(f"\n10. CREATING VISUALIZATIONS")
 print("-"*80)
 
 # Define cluster colors (using first 2 colors from original palette)
 cluster_colors = ['#FF6B6B', '#4ECDC4']
 
-# -------------------------------------------------------------------------
 # 10.1. PCA Scatter Plot (2D)
-# -------------------------------------------------------------------------
 fig, ax = plt.subplots(figsize=(12, 8))
 
 for cluster_id in range(2):
@@ -506,12 +482,10 @@ ax.grid(True, alpha=0.3)
 
 plt.tight_layout()
 plt.savefig(os.path.join(output_dir, 'plots', 'clusters_pca_2d.png'), dpi=300, bbox_inches='tight')
-print("✓ Saved: clusters_pca_2d.png")
+print(" Saved: clusters_pca_2d.png")
 plt.close()
 
-# -------------------------------------------------------------------------
 # 10.2. Feature Distribution by Cluster
-# -------------------------------------------------------------------------
 n_features = len(user_feature_cols)
 n_cols = 3
 n_rows = (n_features + n_cols - 1) // n_cols
@@ -554,12 +528,10 @@ plt.suptitle(f'Feature Distributions by Cluster - Joined Dataset', fontsize=15, 
 plt.tight_layout()
 plt.savefig(os.path.join(output_dir, 'plots', 'feature_distributions_by_cluster.png'), 
            dpi=300, bbox_inches='tight')
-print("✓ Saved: feature_distributions_by_cluster.png")
+print(" Saved: feature_distributions_by_cluster.png")
 plt.close()
 
-# -------------------------------------------------------------------------
 # 10.3. Cluster Heatmap (Normalized Feature Means)
-# -------------------------------------------------------------------------
 # Create heatmap data
 heatmap_data = []
 for cluster_id in range(2):
@@ -594,12 +566,10 @@ ax.set_xlabel('Feature', fontsize=12)
 
 plt.tight_layout()
 plt.savefig(os.path.join(output_dir, 'plots', 'cluster_heatmap.png'), dpi=300, bbox_inches='tight')
-print("✓ Saved: cluster_heatmap.png")
+print(" Saved: cluster_heatmap.png")
 plt.close()
 
-# -------------------------------------------------------------------------
 # 10.4. Stress/Anxiety by Cluster (if available)
-# -------------------------------------------------------------------------
 if 'avg_stress' in user_profiles.columns or 'avg_anxiety' in user_profiles.columns:
     targets_available = []
     if 'avg_stress' in user_profiles.columns:
@@ -643,12 +613,10 @@ if 'avg_stress' in user_profiles.columns or 'avg_anxiety' in user_profiles.colum
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, 'plots', 'stress_anxiety_by_cluster.png'), 
                dpi=300, bbox_inches='tight')
-    print("✓ Saved: stress_anxiety_by_cluster.png")
+    print(" Saved: stress_anxiety_by_cluster.png")
     plt.close()
 
-# -------------------------------------------------------------------------
 # 10.5. Cluster Size Pie Chart
-# -------------------------------------------------------------------------
 fig, ax = plt.subplots(figsize=(10, 8))
 
 cluster_labels_pie = [f'Cluster {i}\n({cluster_sizes[i]} users)' for i in range(2)]
@@ -667,12 +635,10 @@ ax.set_title(f'Cluster Size Distribution - Joined Dataset\n{len(user_profiles)} 
 
 plt.tight_layout()
 plt.savefig(os.path.join(output_dir, 'plots', 'cluster_sizes_pie.png'), dpi=300, bbox_inches='tight')
-print("✓ Saved: cluster_sizes_pie.png")
+print(" Saved: cluster_sizes_pie.png")
 plt.close()
 
-# -------------------------------------------------------------------------
 # 10.6. 3D PCA Plot (if we have 3+ features)
-# -------------------------------------------------------------------------
 if len(user_feature_cols) >= 3:
     pca_3d = PCA(n_components=3)
     X_pca_3d = pca_3d.fit_transform(X_users_scaled)
@@ -708,31 +674,26 @@ if len(user_feature_cols) >= 3:
     
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, 'plots', 'clusters_pca_3d.png'), dpi=300, bbox_inches='tight')
-    print("✓ Saved: clusters_pca_3d.png")
+    print(" Saved: clusters_pca_3d.png")
     plt.close()
 
-# ========================================================================
 # 11. SAVE USER-CLUSTER MAPPING
-# ========================================================================
 print(f"\n11. SAVING RESULTS")
 print("-"*80)
 
 # Save user-cluster assignments
 user_cluster_mapping = user_profiles[['userid', 'user_cluster']].copy()
 user_cluster_mapping.to_csv(os.path.join(output_dir, 'user_cluster_assignments.csv'), index=False)
-print("✓ Saved: user_cluster_assignments.csv")
+print(" Saved: user_cluster_assignments.csv")
 
 # Save full user profiles with clusters
 user_profiles.to_csv(os.path.join(output_dir, 'user_profiles_with_clusters.csv'), index=False)
-print("✓ Saved: user_profiles_with_clusters.csv")
+print(" Saved: user_profiles_with_clusters.csv")
 
-# ========================================================================
 # 12. SUMMARY
-# ========================================================================
 print(f"\n12. SUMMARY")
-print("="*80)
 
-print(f"\n✅ CLUSTERING COMPLETE")
+print(f"\n CLUSTERING COMPLETE")
 print(f"   Dataset: data_with_exam_features.csv (joined dataset)")
 print(f"   Users:                   {len(user_profiles)}")
 print(f"   Clusters:                2")
@@ -741,4 +702,4 @@ print(f"   Silhouette Score:        {silhouette:.4f}")
 print(f"   Davies-Bouldin Index:    {davies_bouldin:.4f}")
 print(f"   Calinski-Harabasz Score: {calinski_harabasz:.2f}")
 
-print(f"\n📁 Results saved to: {output_dir}")
+print(f"\n Results saved to: {output_dir}")

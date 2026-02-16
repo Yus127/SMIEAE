@@ -9,17 +9,15 @@ output_dir = "/Users/YusMolina/Downloads/smieae/data/ml_ready/optimized"
 # Create output directory
 os.makedirs(output_dir, exist_ok=True)
 
-print("="*70)
 print("ML DATASET OPTIMIZER")
-print("="*70)
 
 # Load the combined dataset and completeness info
 print("\nLoading data...")
 combined_df = pd.read_csv(os.path.join(ml_dir, "ml_ready_combined_windows.csv"))
 completeness_df = pd.read_csv(os.path.join(ml_dir, "feature_completeness_detailed.csv"))
 
-print(f"✓ Loaded combined dataset: {combined_df.shape}")
-print(f"✓ Loaded completeness data: {len(completeness_df)} features analyzed")
+print(f" Loaded combined dataset: {combined_df.shape}")
+print(f" Loaded completeness data: {len(completeness_df)} features analyzed")
 
 # Identify feature and target columns
 feature_cols = [col for col in combined_df.columns if col.startswith('w30_') or col.startswith('w60_')]
@@ -42,7 +40,6 @@ completeness_series = pd.Series(feature_completeness).sort_values(ascending=Fals
 
 print("\n" + "="*70)
 print("FEATURE COMPLETENESS DISTRIBUTION")
-print("="*70)
 
 # Show distribution by completeness ranges
 ranges = [
@@ -61,13 +58,10 @@ for min_val, max_val, label in ranges:
         count = (completeness_series >= min_val).sum()
     print(f"  {label}: {count} features")
 
-# ==============================================================================
 # CREATE OPTIMIZED DATASETS WITH DIFFERENT COMPLETENESS THRESHOLDS
-# ==============================================================================
 
 print("\n" + "="*70)
 print("CREATING OPTIMIZED DATASETS")
-print("="*70)
 
 thresholds = [50, 20, 10, 5]
 
@@ -80,7 +74,7 @@ for threshold in thresholds:
     print(f"  Selected features: {len(selected_features)}/{len(feature_cols)}")
     
     if len(selected_features) == 0:
-        print(f"  ⚠ No features meet {threshold}% threshold")
+        print(f"   No features meet {threshold}% threshold")
         continue
     
     # Create optimized dataset
@@ -90,20 +84,17 @@ for threshold in thresholds:
     # Save dataset
     output_file = os.path.join(output_dir, f"ml_optimized_min{threshold}pct.csv")
     optimized_df.to_csv(output_file, index=False)
-    print(f"  ✓ Saved: {output_file}")
+    print(f"   Saved: {output_file}")
     print(f"    Shape: {optimized_df.shape}")
     
     # Calculate average completeness
     avg_completeness = np.mean([feature_completeness[col] for col in selected_features])
     print(f"    Avg feature completeness: {avg_completeness:.2f}%")
 
-# ==============================================================================
 # CREATE HEART RATE FOCUSED DATASET (MOST COMPLETE VARIABLE)
-# ==============================================================================
 
 print("\n" + "="*70)
 print("CREATING HEART RATE FOCUSED DATASET")
-print("="*70)
 
 hr_features = [col for col in feature_cols if 'heart_rate' in col.lower()]
 print(f"\nHeart rate features found: {len(hr_features)}")
@@ -117,17 +108,14 @@ hr_df = combined_df[hr_cols].copy()
 output_hr = os.path.join(output_dir, "ml_heart_rate_focused.csv")
 hr_df.to_csv(output_hr, index=False)
 
-print(f"\n✓ Saved heart rate focused dataset: {output_hr}")
+print(f"\n Saved heart rate focused dataset: {output_hr}")
 print(f"  Shape: {hr_df.shape}")
 print(f"  This dataset has the most complete data (~86% completeness)")
 
-# ==============================================================================
 # CREATE IMPUTED DATASETS
-# ==============================================================================
 
 print("\n" + "="*70)
 print("CREATING IMPUTED DATASETS")
-print("="*70)
 
 print("\nCreating datasets with different imputation strategies...")
 
@@ -139,9 +127,9 @@ print(f"   Rows remaining: {len(complete_df)}/{len(combined_df)} ({len(complete_
 if len(complete_df) > 0:
     output_complete = os.path.join(output_dir, "ml_complete_cases_only.csv")
     complete_df.to_csv(output_complete, index=False)
-    print(f"   ✓ Saved: {output_complete}")
+    print(f"    Saved: {output_complete}")
 else:
-    print("   ⚠ No complete cases found")
+    print("    No complete cases found")
 
 # Strategy 2: Mean imputation for features with >50% completeness
 print("\n2. Mean imputation (features with >50% completeness):")
@@ -156,9 +144,9 @@ if len(high_complete_features) > 0:
     output_imputed = os.path.join(output_dir, "ml_mean_imputed_high_complete.csv")
     imputed_df.to_csv(output_imputed, index=False)
     print(f"   Features imputed: {len(high_complete_features)}")
-    print(f"   ✓ Saved: {output_imputed}")
+    print(f"    Saved: {output_imputed}")
 else:
-    print("   ⚠ No features with >50% completeness for imputation")
+    print("    No features with >50% completeness for imputation")
 
 # Strategy 3: Forward fill + median imputation for heart rate
 print("\n3. Heart rate with forward fill + median:")
@@ -178,16 +166,13 @@ for col in hr_features:
 
 output_hr_imputed = os.path.join(output_dir, "ml_heart_rate_imputed.csv")
 hr_imputed_df.to_csv(output_hr_imputed, index=False)
-print(f"   ✓ Saved: {output_hr_imputed}")
+print(f"    Saved: {output_hr_imputed}")
 print(f"   All heart rate features now have complete data")
 
-# ==============================================================================
 # FEATURE IMPORTANCE ANALYSIS PREPARATION
-# ==============================================================================
 
 print("\n" + "="*70)
 print("FEATURE SELECTION RECOMMENDATIONS")
-print("="*70)
 
 # Group features by base variable and window
 feature_groups = {}
@@ -251,7 +236,7 @@ selection_guide_df = selection_guide_df.sort_values('max_completeness', ascendin
 output_guide = os.path.join(output_dir, "feature_selection_guide.csv")
 selection_guide_df.to_csv(output_guide, index=False)
 
-print(f"\n✓ Saved feature selection guide: {output_guide}")
+print(f"\n Saved feature selection guide: {output_guide}")
 print("\nFeature recommendations:")
 print("-" * 70)
 
@@ -260,13 +245,10 @@ for _, row in selection_guide_df.iterrows():
     print(f"  Max completeness: {row['max_completeness']:.2f}%")
     print(f"  {row['recommendation']}")
 
-# ==============================================================================
 # TARGET VARIABLE ANALYSIS
-# ==============================================================================
 
 print("\n" + "="*70)
 print("TARGET VARIABLE ANALYSIS")
-print("="*70)
 
 target_analysis = []
 
@@ -296,18 +278,15 @@ target_analysis_df = pd.DataFrame(target_analysis)
 output_targets = os.path.join(output_dir, "target_variables_analysis.csv")
 target_analysis_df.to_csv(output_targets, index=False)
 
-print(f"\n✓ Saved target analysis: {output_targets}")
+print(f"\n Saved target analysis: {output_targets}")
 print("\nTarget variables:")
 for _, row in target_analysis_df.iterrows():
     print(f"  {row['target']}: {row['completeness_pct']:.1f}% complete")
 
-# ==============================================================================
 # FINAL SUMMARY AND RECOMMENDATIONS
-# ==============================================================================
 
 print("\n" + "="*70)
 print("FINAL SUMMARY AND ML RECOMMENDATIONS")
-print("="*70)
 
 summary = f"""
 DATA QUALITY SUMMARY:
@@ -357,11 +336,9 @@ summary_file = os.path.join(output_dir, "ML_RECOMMENDATIONS.txt")
 with open(summary_file, 'w') as f:
     f.write(summary)
 
-print(f"\n✓ Saved recommendations: {summary_file}")
+print(f"\n Saved recommendations: {summary_file}")
 
 print("\n" + "="*70)
-print("✓ OPTIMIZATION COMPLETE!")
-print("="*70)
 
 print(f"\nAll files saved to: {output_dir}")
 print("\nGenerated files:")

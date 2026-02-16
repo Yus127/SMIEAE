@@ -11,9 +11,7 @@ def analyze_dataframe(df, user_name):
     print(f"{'='*80}\n")
     
     # Basic Information
-    print("=" * 80)
     print("1. BASIC INFORMATION")
-    print("=" * 80)
     print(f"Total number of rows: {len(df):,}")
     print(f"Total number of columns: {len(df.columns):,}")
     print(f"Memory usage: {df.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
@@ -26,7 +24,6 @@ def analyze_dataframe(df, user_name):
     # Column Information
     print(f"\n{'=' * 80}")
     print("2. VARIABLES (COLUMNS)")
-    print("=" * 80)
     
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
@@ -58,7 +55,6 @@ def analyze_dataframe(df, user_name):
     # Missing Data Analysis
     print(f"\n{'=' * 80}")
     print("3. MISSING DATA ANALYSIS")
-    print("=" * 80)
     
     missing_data = pd.DataFrame({
         'Column': df.columns,
@@ -77,7 +73,6 @@ def analyze_dataframe(df, user_name):
     # Numeric Variables Statistics
     print(f"\n{'=' * 80}")
     print("4. NUMERIC VARIABLES - DESCRIPTIVE STATISTICS")
-    print("=" * 80)
     
     if len(numeric_cols) > 0:
         stats = df[numeric_cols].describe().T
@@ -102,7 +97,6 @@ def analyze_dataframe(df, user_name):
     # Data Distribution Summary
     print(f"\n{'=' * 80}")
     print("5. DATA DISTRIBUTION SUMMARY")
-    print("=" * 80)
     
     if len(numeric_cols) > 0:
         print("\nVariables with potential outliers (values beyond 3 std from mean):")
@@ -132,7 +126,6 @@ def analyze_dataframe(df, user_name):
     if 'timestamp' in df.columns:
         print(f"\n{'=' * 80}")
         print("6. TEMPORAL ANALYSIS")
-        print("=" * 80)
         
         df['hour'] = df['timestamp'].dt.hour
         df['day_of_week'] = df['timestamp'].dt.day_name()
@@ -156,7 +149,6 @@ def analyze_dataframe(df, user_name):
     # Completeness Score
     print(f"\n{'=' * 80}")
     print("7. DATA COMPLETENESS SCORE")
-    print("=" * 80)
     
     completeness = (1 - df.isnull().sum().sum() / (len(df) * len(df.columns))) * 100
     print(f"Overall data completeness: {completeness:.2f}%")
@@ -164,7 +156,6 @@ def analyze_dataframe(df, user_name):
     # Variable type breakdown
     print(f"\n{'=' * 80}")
     print("8. VARIABLE CATEGORIES (BY NAME PREFIX)")
-    print("=" * 80)
     
     # Group variables by their prefix (source)
     prefixes = {}
@@ -270,7 +261,6 @@ def aggregate_all_users():
     # Print overall statistics
     print("\n" + "="*80)
     print("1. OVERALL DATASET STATISTICS")
-    print("="*80)
     print(f"Total number of users: {len(csv_files)}")
     print(f"Total records across all users: {total_records:,}")
     print(f"Total unique variables: {len(all_columns)}")
@@ -286,13 +276,11 @@ def aggregate_all_users():
     # Per-user summary
     print("\n" + "="*80)
     print("2. PER-USER SUMMARY")
-    print("="*80)
     print(summary_df.to_string(index=False))
     
     # Statistics about statistics
     print("\n" + "="*80)
     print("3. CROSS-USER STATISTICS")
-    print("="*80)
     print(f"\nRows per user:")
     print(f"  Mean: {summary_df['Rows'].mean():,.0f}")
     print(f"  Median: {summary_df['Rows'].median():,.0f}")
@@ -322,7 +310,6 @@ def aggregate_all_users():
     # Variable presence analysis
     print("\n" + "="*80)
     print("4. VARIABLE PRESENCE ACROSS USERS")
-    print("="*80)
     
     var_presence_df = pd.DataFrame([
         {
@@ -352,7 +339,6 @@ def aggregate_all_users():
     # Variable categories
     print("\n" + "="*80)
     print("5. VARIABLE CATEGORIES (BY PREFIX)")
-    print("="*80)
     
     prefixes = {}
     for var in all_columns:
@@ -370,7 +356,6 @@ def aggregate_all_users():
     # Data quality summary
     print("\n" + "="*80)
     print("6. DATA QUALITY SUMMARY")
-    print("="*80)
     
     high_quality = summary_df[summary_df['Completeness_%'] >= 80]
     medium_quality = summary_df[(summary_df['Completeness_%'] >= 60) & (summary_df['Completeness_%'] < 80)]
@@ -389,7 +374,6 @@ def aggregate_all_users():
     output_file = base_dir / "MASTER_SUMMARY_ALL_USERS.txt"
     print(f"\n" + "="*80)
     print(f"Saving master summary to: {output_file}")
-    print("="*80)
     
     # Save detailed CSV
     summary_csv = base_dir / "users_summary_statistics.csv"
@@ -402,7 +386,6 @@ def aggregate_all_users():
     
     print("\n" + "="*80)
     print("MASTER SUMMARY COMPLETE")
-    print("="*80)
 
 def main():
     #Main execution function
@@ -432,7 +415,6 @@ def main():
             df = pd.read_csv(csv_file, low_memory=False)
             analyze_dataframe(df, user_name)
             
-            # Optional: Save summary to text file
             output_file = base_dir / f"{user_name}_analysis_summary.txt"
             print(f"\nSaving analysis summary to: {output_file}")
             
@@ -442,7 +424,6 @@ def main():
     
     print("\n" + "="*80)
     print("ALL ANALYSES COMPLETE")
-    print("="*80)
     print("GENERATE SUMMARY OF ALL THE SUMMARIES")
     aggregate_all_users()
 

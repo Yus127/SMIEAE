@@ -6,9 +6,7 @@ import glob
 # Define paths
 ml_dir = "/Users/YusMolina/Downloads/smieae/data/ml_ready"
 
-print("="*80)
 print("MOST COMPLETE VARIABLES ANALYSIS")
-print("="*80)
 
 # Try to find any available ML dataset
 possible_files = [
@@ -40,7 +38,7 @@ print("-"*80)
 
 # Load the dataset
 df = pd.read_csv(dataset_file)
-print(f"✓ Loaded dataset with {len(df)} rows and {len(df.columns)} columns\n")
+print(f" Loaded dataset with {len(df)} rows and {len(df.columns)} columns\n")
 
 # Identify feature columns (exclude metadata and target columns)
 metadata_cols = ['userid', 'response_timestamp', 'window_start', 'window_end', 
@@ -100,7 +98,6 @@ completeness_df = completeness_df.sort_values('completeness_pct', ascending=Fals
 # Create summary by base variable
 print("\n" + "="*80)
 print("VARIABLE COMPLETENESS RANKING")
-print("="*80)
 
 variable_summary = completeness_df.groupby('base_variable').agg({
     'completeness_pct': ['mean', 'min', 'max', 'count']
@@ -124,7 +121,6 @@ for idx, row in variable_summary.iterrows():
 # Detailed breakdown for top variables
 print("\n" + "="*80)
 print("DETAILED BREAKDOWN OF TOP 5 VARIABLES")
-print("="*80)
 
 for idx, row in variable_summary.head(5).iterrows():
     var_name = row['variable_name']
@@ -144,7 +140,6 @@ for idx, row in variable_summary.head(5).iterrows():
 # Categorization
 print("\n" + "="*80)
 print("COMPLETENESS CATEGORIES")
-print("="*80)
 
 excellent = variable_summary[variable_summary['avg_completeness'] >= 80]
 good = variable_summary[(variable_summary['avg_completeness'] >= 50) & 
@@ -155,7 +150,7 @@ poor = variable_summary[(variable_summary['avg_completeness'] >= 10) &
                        (variable_summary['avg_completeness'] < 20)]
 very_poor = variable_summary[variable_summary['avg_completeness'] < 10]
 
-print(f"\n✓ EXCELLENT (≥80% completeness): {len(excellent)} variables")
+print(f"\n EXCELLENT (≥80% completeness): {len(excellent)} variables")
 if len(excellent) > 0:
     for _, row in excellent.iterrows():
         print(f"   • {row['variable_name']}: {row['avg_completeness']:.2f}%")
@@ -170,12 +165,12 @@ if len(fair) > 0:
     for _, row in fair.iterrows():
         print(f"   • {row['variable_name']}: {row['avg_completeness']:.2f}%")
 
-print(f"\n⚠ POOR (10-20% completeness): {len(poor)} variables")
+print(f"\n POOR (10-20% completeness): {len(poor)} variables")
 if len(poor) > 0:
     for _, row in poor.iterrows():
         print(f"   • {row['variable_name']}: {row['avg_completeness']:.2f}%")
 
-print(f"\n✗ VERY POOR (<10% completeness): {len(very_poor)} variables")
+print(f"\n VERY POOR (<10% completeness): {len(very_poor)} variables")
 if len(very_poor) > 0:
     for _, row in very_poor.iterrows():
         print(f"   • {row['variable_name']}: {row['avg_completeness']:.2f}%")
@@ -183,24 +178,23 @@ if len(very_poor) > 0:
 # ML Recommendations
 print("\n" + "="*80)
 print("RECOMMENDATIONS FOR MACHINE LEARNING")
-print("="*80)
 
 if len(excellent) > 0:
-    print(f"\n🎯 PRIMARY FEATURES (Start here):")
+    print(f"\n PRIMARY FEATURES (Start here):")
     print(f"   Use these {len(excellent)} variable(s) for your initial models:")
     for _, row in excellent.iterrows():
-        print(f"   ✓ {row['variable_name']} ({row['avg_completeness']:.2f}% complete)")
+        print(f"    {row['variable_name']} ({row['avg_completeness']:.2f}% complete)")
         print(f"     → Excellent data availability, reliable predictions")
 
 if len(good) > 0:
-    print(f"\n📊 SECONDARY FEATURES (Add if needed):")
+    print(f"\n SECONDARY FEATURES (Add if needed):")
     print(f"   Consider these {len(good)} variable(s) to enhance models:")
     for _, row in good.iterrows():
         print(f"   ○ {row['variable_name']} ({row['avg_completeness']:.2f}% complete)")
 
 if len(fair) > 0 or len(poor) > 0 or len(very_poor) > 0:
     sparse_count = len(fair) + len(poor) + len(very_poor)
-    print(f"\n⚠️  SPARSE FEATURES (Use with caution):")
+    print(f"\n  SPARSE FEATURES (Use with caution):")
     print(f"   {sparse_count} variable(s) have <50% completeness")
     print(f"   → Require missing data strategies:")
     print(f"     • Tree-based models (XGBoost, LightGBM) handle NaN natively")
@@ -210,20 +204,19 @@ if len(fair) > 0 or len(poor) > 0 or len(very_poor) > 0:
 # Context-aware recommendations
 if 'daily_total_steps' in df.columns:
     steps_completeness = (df['daily_total_steps'].notna().sum() / len(df)) * 100
-    print(f"\n🚶 PHYSICAL ACTIVITY:")
+    print(f"\n PHYSICAL ACTIVITY:")
     print(f"   daily_total_steps: {steps_completeness:.2f}% complete")
     if steps_completeness > 50:
         print(f"   → Good supplement to physiological features")
 
 if 'is_exam_period' in df.columns:
     exam_count = df['is_exam_period'].sum()
-    print(f"\n📚 CONTEXTUAL FEATURES:")
+    print(f"\n CONTEXTUAL FEATURES:")
     print(f"   Exam period responses: {exam_count}/{len(df)} ({exam_count/len(df)*100:.1f}%)")
     print(f"   → Use to analyze stress differences during exams")
 
 print("\n" + "="*80)
 print("SUMMARY")
-print("="*80)
 print(f"\nDataset: {len(df)} observations")
 print(f"Total variables: {len(variable_summary)}")
 print(f"High-quality variables (≥50%): {len(excellent) + len(good)}")
@@ -231,18 +224,18 @@ print(f"Overall average completeness: {variable_summary['avg_completeness'].mean
 
 if len(excellent) > 0:
     best_var = variable_summary.iloc[0]
-    print(f"\n🏆 BEST VARIABLE: {best_var['variable_name']}")
+    print(f"\n BEST VARIABLE: {best_var['variable_name']}")
     print(f"   Completeness: {best_var['avg_completeness']:.2f}%")
     print(f"   Number of features: {int(best_var['num_features'])}")
-    print(f"\n   👉 RECOMMENDATION: Start your ML modeling with this variable!")
+    print(f"\n    RECOMMENDATION: Start your ML modeling with this variable!")
 
 # Save detailed report
 output_file = os.path.join(ml_dir, "variable_completeness_analysis_10_5min.csv")
 completeness_df.to_csv(output_file, index=False)
-print(f"\n✓ Detailed analysis saved to: {output_file}")
+print(f"\n Detailed analysis saved to: {output_file}")
 
 summary_file = os.path.join(ml_dir, "variable_summary_5_10min.csv")
 variable_summary.to_csv(summary_file, index=False)
-print(f"✓ Summary saved to: {summary_file}")
+print(f" Summary saved to: {summary_file}")
 
 print("\n" + "="*80)

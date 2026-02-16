@@ -27,31 +27,26 @@ import os
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, "plots"), exist_ok=True)
 
-print("="*80)
 print("BI-LSTM BINARY CLASSIFICATION - MEDIAN SPLIT (TIME-BASED SPLIT)")
 print("Window: 3 timesteps | Split: Time-based 70/15/15 | Target: Median (no exclusions)")
 print("Using ALL data points with chronological split for time series")
-print("="*80)
 
 print("\nLoading data...")
 df = pd.read_csv(INPUT_PATH)
-print(f"✓ Loaded {len(df)} observations from {df['userid'].nunique()} users")
+print(f" Loaded {len(df)} observations from {df['userid'].nunique()} users")
 
-# ============================================================================
 # FEATURE ENGINEERING
-# ============================================================================
 
 print("\n" + "="*80)
 print("FEATURE ENGINEERING")
-print("="*80)
 
 # Sort by user and date
 if 'unified_date' in df.columns:
     df = df.sort_values(['userid', 'unified_date']).reset_index(drop=True)
-    print("✓ Sorted by userid and unified_date")
+    print(" Sorted by userid and unified_date")
 else:
     df = df.sort_values(['userid']).reset_index(drop=True)
-    print("✓ Sorted by userid")
+    print(" Sorted by userid")
 
 # User baselines (using all data for each user)
 user_baselines = df.groupby('userid').agg({
@@ -122,11 +117,9 @@ temporal_features = [
 
 # Keep only available features
 temporal_features = [f for f in temporal_features if f in df.columns]
-print(f"✓ Using {len(temporal_features)} temporal features")
+print(f" Using {len(temporal_features)} temporal features")
 
-# ============================================================================
 # CREATE SEQUENCES WITH MEDIAN SPLIT (KEEPS ALL DATA)
-# ============================================================================
 
 def create_sequences_median(df, target_col, feature_cols, sequence_length=3):
     """
@@ -140,16 +133,16 @@ def create_sequences_median(df, target_col, feature_cols, sequence_length=3):
     print(f"{'='*80}")
     
     df_clean = df[df[target_col].notna()].copy()
-    print(f"✓ Data with {target_col}: {len(df_clean)} observations")
+    print(f" Data with {target_col}: {len(df_clean)} observations")
     
     # MEDIAN split (simple, keeps ALL data)
     median = df_clean[target_col].median()
     df_clean['target_binary'] = (df_clean[target_col] >= median).astype(int)
     
-    print(f"✓ MEDIAN split: threshold = {median:.2f}")
+    print(f" MEDIAN split: threshold = {median:.2f}")
     print(f"  Low (< {median:.2f}):  {np.sum(df_clean['target_binary']==0)} samples ({np.sum(df_clean['target_binary']==0)/len(df_clean)*100:.1f}%)")
     print(f"  High (≥ {median:.2f}): {np.sum(df_clean['target_binary']==1)} samples ({np.sum(df_clean['target_binary']==1)/len(df_clean)*100:.1f}%)")
-    print(f"✓ KEEPING ALL DATA (no middle exclusion)")
+    print(f" KEEPING ALL DATA (no middle exclusion)")
     
     sequences = []
     targets = []
@@ -174,15 +167,13 @@ def create_sequences_median(df, target_col, feature_cols, sequence_length=3):
     y = np.array(targets)
     user_ids = np.array(user_ids)
     
-    print(f"✓ Created {len(sequences)} sequences from {len(df_clean['userid'].unique())} users")
+    print(f" Created {len(sequences)} sequences from {len(df_clean['userid'].unique())} users")
     print(f"  Sequences per user: {len(sequences) / len(df_clean['userid'].unique()):.1f} avg")
     print(f"  Final distribution: Low={np.sum(y==0)} ({np.sum(y==0)/len(y)*100:.1f}%), High={np.sum(y==1)} ({np.sum(y==1)/len(y)*100:.1f}%)")
     
     return X, y, user_ids, median
 
-# ============================================================================
 # TIME-BASED SPLIT (NO SHUFFLING)
-# ============================================================================
 
 def time_based_split(X, y, user_ids, train_ratio=0.70, val_ratio=0.15):
     """
@@ -218,15 +209,15 @@ def time_based_split(X, y, user_ids, train_ratio=0.70, val_ratio=0.15):
     user_ids_val = user_ids[val_idx]
     user_ids_test = user_ids[test_idx]
     
-    print(f"✓ Train: {len(X_train)} sequences (Low={np.sum(y_train==0)}, High={np.sum(y_train==1)})")
+    print(f" Train: {len(X_train)} sequences (Low={np.sum(y_train==0)}, High={np.sum(y_train==1)})")
     print(f"  Users in train: {len(np.unique(user_ids_train))}")
     print(f"  Class balance: Low={np.sum(y_train==0)/len(y_train)*100:.1f}%, High={np.sum(y_train==1)/len(y_train)*100:.1f}%")
     
-    print(f"\n✓ Val:   {len(X_val)} sequences (Low={np.sum(y_val==0)}, High={np.sum(y_val==1)})")
+    print(f"\n Val:   {len(X_val)} sequences (Low={np.sum(y_val==0)}, High={np.sum(y_val==1)})")
     print(f"  Users in val: {len(np.unique(user_ids_val))}")
     print(f"  Class balance: Low={np.sum(y_val==0)/len(y_val)*100:.1f}%, High={np.sum(y_val==1)/len(y_val)*100:.1f}%")
     
-    print(f"\n✓ Test:  {len(X_test)} sequences (Low={np.sum(y_test==0)}, High={np.sum(y_test==1)})")
+    print(f"\n Test:  {len(X_test)} sequences (Low={np.sum(y_test==0)}, High={np.sum(y_test==1)})")
     print(f"  Users in test: {len(np.unique(user_ids_test))}")
     print(f"  Class balance: Low={np.sum(y_test==0)/len(y_test)*100:.1f}%, High={np.sum(y_test==1)/len(y_test)*100:.1f}%")
     
@@ -239,7 +230,7 @@ def time_based_split(X, y, user_ids, train_ratio=0.70, val_ratio=0.15):
     overlap_train_test = train_users & test_users
     overlap_val_test = val_users & test_users
     
-    print(f"\n⚠ User Overlap Analysis (expected for time-based split):")
+    print(f"\n User Overlap Analysis (expected for time-based split):")
     print(f"  Train ∩ Val:  {len(overlap_train_val)} users")
     print(f"  Train ∩ Test: {len(overlap_train_test)} users")
     print(f"  Val ∩ Test:   {len(overlap_val_test)} users")
@@ -247,9 +238,7 @@ def time_based_split(X, y, user_ids, train_ratio=0.70, val_ratio=0.15):
     
     return X_train, X_val, X_test, y_train, y_val, y_test
 
-# ============================================================================
 # NORMALIZE SEQUENCES
-# ============================================================================
 
 def normalize_sequences(X_train, X_val, X_test):
     """Normalize sequences using StandardScaler"""
@@ -281,14 +270,12 @@ def normalize_sequences(X_train, X_val, X_test):
     X_val = X_val_flat.reshape(-1, n_timesteps, n_features)
     X_test = X_test_flat.reshape(-1, n_timesteps, n_features)
     
-    print(f"✓ Applied median imputation and standard scaling")
-    print(f"✓ Final shapes: Train={X_train.shape}, Val={X_val.shape}, Test={X_test.shape}")
+    print(f" Applied median imputation and standard scaling")
+    print(f" Final shapes: Train={X_train.shape}, Val={X_val.shape}, Test={X_test.shape}")
     
     return X_train, X_val, X_test, scaler, imputer
 
-# ============================================================================
 # BUILD BI-LSTM MODEL (SAME AS BEFORE)
-# ============================================================================
 
 def build_bilstm_model(n_timesteps, n_features):
     """
@@ -327,9 +314,7 @@ def build_bilstm_model(n_timesteps, n_features):
     
     return model
 
-# ============================================================================
 # CALCULATE METRICS
-# ============================================================================
 
 def calculate_metrics(y_true, y_pred, y_pred_proba):
     """Calculate comprehensive classification metrics"""
@@ -341,9 +326,7 @@ def calculate_metrics(y_true, y_pred, y_pred_proba):
         'roc_auc': roc_auc_score(y_true, y_pred_proba)
     }
 
-# ============================================================================
 # VISUALIZATIONS
-# ============================================================================
 
 def create_visualizations(history, y_test, y_test_pred, y_test_proba, cm, target_name, output_dir):
     """Create comprehensive visualizations"""
@@ -442,9 +425,7 @@ def create_visualizations(history, y_test, y_test_pred, y_test_proba, cm, target
                 dpi=300, bbox_inches='tight')
     plt.close()
 
-# ============================================================================
 # TRAIN AND EVALUATE PIPELINE
-# ============================================================================
 
 def train_and_evaluate(df, target_col, target_name, output_dir):
     """Complete training and evaluation pipeline with TIME-BASED SPLIT"""
@@ -467,7 +448,7 @@ def train_and_evaluate(df, target_col, target_name, output_dir):
     # 4. Class weights
     class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
     class_weight_dict = {i: w for i, w in enumerate(class_weights)}
-    print(f"\n✓ Class weights: {class_weight_dict}")
+    print(f"\n Class weights: {class_weight_dict}")
     
     # 5. Build model
     n_timesteps, n_features = X_train.shape[1], X_train.shape[2]
@@ -516,7 +497,7 @@ def train_and_evaluate(df, target_col, target_name, output_dir):
         verbose=2
     )
     
-    print(f"\n✓ Training complete!")
+    print(f"\n Training complete!")
     
     # 8. Predict
     y_train_proba = model.predict(X_train, verbose=0).flatten()
@@ -567,11 +548,11 @@ def train_and_evaluate(df, target_col, target_name, output_dir):
     print(f"\nTrain-Test Gap: {gap:.4f}")
     
     if gap <= 0.10:
-        print("  ✓ Excellent generalization (gap ≤ 0.10)")
+        print("   Excellent generalization (gap ≤ 0.10)")
     elif gap <= 0.15:
-        print("  ✓ Good generalization (gap ≤ 0.15)")
+        print("   Good generalization (gap ≤ 0.15)")
     else:
-        print("  ⚠ Moderate overfitting (gap > 0.15)")
+        print("   Moderate overfitting (gap > 0.15)")
     
     # 11. Classification report
     print(f"\n{'-'*80}")
@@ -595,7 +576,7 @@ def train_and_evaluate(df, target_col, target_name, output_dir):
         print(f"  High (Class 1): {high_acc:.4f}")
     
     # 13. Create visualizations
-    print(f"\n✓ Creating visualizations...")
+    print(f"\n Creating visualizations...")
     create_visualizations(history, y_test, y_test_pred, y_test_proba, cm, target_name, output_dir)
     
     # 14. Save model and artifacts
@@ -603,7 +584,7 @@ def train_and_evaluate(df, target_col, target_name, output_dir):
     joblib.dump(scaler, os.path.join(output_dir, f'{target_name.lower()}_scaler.pkl'))
     joblib.dump(imputer, os.path.join(output_dir, f'{target_name.lower()}_imputer.pkl'))
     
-    print(f"✓ Saved model, scaler, and imputer")
+    print(f" Saved model, scaler, and imputer")
     
     return {
         'target': target_name,
@@ -622,9 +603,7 @@ def train_and_evaluate(df, target_col, target_name, output_dir):
         'gap': gap
     }
 
-# ============================================================================
 # MAIN EXECUTION
-# ============================================================================
 
 print(f"\n{'='*80}")
 print("STARTING TRAINING PIPELINE")
@@ -636,13 +615,10 @@ stress_results = train_and_evaluate(df, 'stress_level', 'Stress', OUTPUT_DIR)
 # Train Anxiety model
 anxiety_results = train_and_evaluate(df, 'anxiety_level', 'Anxiety', OUTPUT_DIR)
 
-# ============================================================================
 # FINAL SUMMARY
-# ============================================================================
 
 print("\n" + "="*80)
 print("FINAL SUMMARY - MEDIAN SPLIT (TIME-BASED SPLIT)")
-print("="*80)
 
 print(f"\nSTRESS:")
 print(f"  Median threshold: {stress_results['median']:.2f}")
@@ -674,5 +650,3 @@ print(f"  Train-Test Gap: {avg_gap:.4f}")
 summary_df = pd.DataFrame([stress_results, anxiety_results])
 summary_df.to_csv(os.path.join(OUTPUT_DIR, 'timeseries_split_results_summary.csv'), index=False)
 
-print(f"\n✅ COMPLETE! All results saved to: {OUTPUT_DIR}")
-print("="*80)

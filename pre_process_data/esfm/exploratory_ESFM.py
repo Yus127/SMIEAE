@@ -20,9 +20,7 @@ import numpy as np
 import pandas as pd
 
 
-# ----------------------------
 # CONFIG
-# ----------------------------
 
 BASE_PATH = "/Users/YusMolina/Downloads/smieae/data/data_clean/ESFM/"
 CONTRARIO_PATH = Path(BASE_PATH+"combined_ESFM_Contrario.csv")
@@ -53,9 +51,7 @@ IN_COL   = "IN_Count"
 OUT_COL  = "OUT_Count"
 
 
-# ----------------------------
 # HELPERS
-# ----------------------------
 
 def load_sensor_csv(path: Path) -> pd.DataFrame:
     if not path.exists():

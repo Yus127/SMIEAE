@@ -53,9 +53,7 @@ def load_all_daily_summaries(folder_path):
         return None
 
 # Load daily summaries
-print("="*60)
 print("LOADING DAILY SUMMARIES")
-print("="*60)
 daily_summaries = load_all_daily_summaries(daily_summaries_folder)
 
 if daily_summaries is None:
@@ -65,7 +63,6 @@ if daily_summaries is None:
 # Load daily questions (anxiety and stress)
 print("\n" + "="*60)
 print("LOADING DAILY QUESTIONS")
-print("="*60)
 try:
     daily_questions = pd.read_csv(daily_questions_file)
     print(f"Loaded daily questions: {len(daily_questions)} records")
@@ -78,7 +75,6 @@ except Exception as e:
 # Exclude users 39 and 54
 print("\n" + "="*60)
 print("FILTERING DATA")
-print("="*60)
 print(f"Excluding users: {excluded_users}")
 
 daily_summaries_filtered = daily_summaries[~daily_summaries['userid'].isin(excluded_users)]
@@ -90,7 +86,6 @@ print(f"Daily questions after filtering: {len(daily_questions_filtered)} records
 # Prepare date columns for merging
 print("\n" + "="*60)
 print("PREPARING DATA FOR MERGE")
-print("="*60)
 
 # Check what date column exists in daily_summaries
 date_cols_summary = [col for col in daily_summaries_filtered.columns if 'date' in col.lower()]
@@ -138,7 +133,6 @@ print(f"Daily questions shape before merge: {daily_questions_subset.shape}")
 # Merge the dataframes
 print("\n" + "="*60)
 print("MERGING DATA")
-print("="*60)
 combined_data = pd.merge(
     daily_summaries_filtered,
     daily_questions_subset,
@@ -152,7 +146,6 @@ print(f"Users in combined data: {combined_data['userid'].nunique()}")
 # Check merge quality
 print("\n" + "="*60)
 print("MERGE QUALITY CHECK")
-print("="*60)
 total_records = len(combined_data)
 with_stress = combined_data['stress_level'].notna().sum()
 with_anxiety = combined_data['anxiety_level'].notna().sum()
@@ -164,7 +157,6 @@ print(f"Records with anxiety data: {with_anxiety} ({with_anxiety/total_records*1
 # Remove unwanted columns
 print("\n" + "="*60)
 print("REMOVING REDUNDANT COLUMNS")
-print("="*60)
 columns_to_remove = [
     'sleep_global_timeInBed',
     'wake_minutes',
@@ -198,7 +190,6 @@ if missing_cols:
 # Encode categorical variables
 print("\n" + "="*60)
 print("ENCODING CATEGORICAL VARIABLES")
-print("="*60)
 
 # Define encoding mappings
 encoding_mappings = {
@@ -235,16 +226,15 @@ for column, mapping in encoding_mappings.items():
         if len(unmapped) > 0:
             print(f"Warning: '{column}' has unmapped values: {unmapped}")
         
-        print(f"✓ Encoded '{column}' -> '{column}_encoded'")
+        print(f" Encoded '{column}' -> '{column}_encoded'")
         print(f"  Original values: {combined_data[column].value_counts().to_dict()}")
         print(f"  Encoded distribution: {combined_data[f'{column}_encoded'].value_counts().sort_index().to_dict()}")
     else:
-        print(f"✗ Column '{column}' not found in dataset")
+        print(f" Column '{column}' not found in dataset")
 
 # Consolidate date columns
 print("\n" + "="*60)
 print("CONSOLIDATING DATE COLUMNS")
-print("="*60)
 
 date_columns = ['timestamp', 'sleep_global_dateOfSleep', 'date']
 existing_date_cols = [col for col in date_columns if col in combined_data.columns]
@@ -275,7 +265,7 @@ if existing_date_cols:
     
     # Check result
     missing_unified = combined_data['unified_date'].isna().sum()
-    print(f"\n✓ Created 'unified_date' column")
+    print(f"\n Created 'unified_date' column")
     print(f"  Missing values: {missing_unified}/{len(combined_data)} ({missing_unified/len(combined_data)*100:.1f}%)")
     
     # Drop original date columns
@@ -293,7 +283,6 @@ if categorical_cols_to_drop:
 # Save combined data
 print("\n" + "="*60)
 print("SAVING COMBINED DATA")
-print("="*60)
 combined_data.to_csv(output_file, index=False)
 print(f"Combined data saved to: {output_file}")
 print(f"Final dataset: {len(combined_data)} records, {len(combined_data.columns)} columns")
@@ -301,7 +290,6 @@ print(f"Final dataset: {len(combined_data)} records, {len(combined_data.columns)
 # Display summary statistics
 print("\n" + "="*60)
 print("SUMMARY BY USER")
-print("="*60)
 user_summary = combined_data.groupby('userid').agg({
     'stress_level': ['count', 'mean'],
     'anxiety_level': ['count', 'mean']
@@ -309,8 +297,6 @@ user_summary = combined_data.groupby('userid').agg({
 print(user_summary)
 
 print("\n" + "="*60)
-print("PROCESS COMPLETE!")
-print("="*60)
 
 
 """

@@ -137,7 +137,6 @@ class StressAnxietyAnomalyDetector:
         
         print("\n" + "="*80)
         print("ANOMALY DETECTION RESULTS")
-        print("="*80)
         print(f"Total samples: {len(predictions)}")
         print(f"Anomalies detected: {n_anomalies} ({anomaly_rate:.2f}%)")
         print(f"Normal samples: {(predictions == 1).sum()} ({100-anomaly_rate:.2f}%)")
@@ -308,7 +307,6 @@ def analyze_dataset(file_path, window_name, contamination=0.1, output_dir=None):
     
     print("\n" + "="*100)
     print(f"ANALYZING: {window_name}")
-    print("="*100)
     
     # Load data
     df = pd.read_csv(file_path)
@@ -354,11 +352,8 @@ def main():
     """
     Main execution function
     """
-    print("="*100)
     print("ISOLATION FOREST ANOMALY DETECTION FOR STRESS AND ANXIETY")
-    print("="*100)
     
-    # Define datasets - UPDATE THESE PATHS TO YOUR LOCAL DIRECTORY
     ml_dir = "/Users/YusMolina/Downloads/smieae/data/ml_ready"
     
     datasets = {
@@ -396,7 +391,6 @@ def main():
     # Summary comparison
     print("\n" + "="*100)
     print("SUMMARY COMPARISON ACROSS ALL WINDOWS")
-    print("="*100)
     
     summary_data = []
     for window_name, results_df in all_results.items():
@@ -438,8 +432,6 @@ def main():
     print(f"\nSummary saved: {summary_path}")
     
     print("\n" + "="*100)
-    print("ANALYSIS COMPLETE!")
-    print("="*100)
     print(f"\nAll results saved to: {output_dir}")
     print("\nGenerated files:")
     print("  - anomaly_results_{window}.csv (for each window)")

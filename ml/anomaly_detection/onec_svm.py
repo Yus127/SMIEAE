@@ -150,7 +150,6 @@ class StressAnxietyOCSVM:
         
         print("\n" + "="*80)
         print("ONE-CLASS SVM ANOMALY DETECTION RESULTS")
-        print("="*80)
         print(f"Total samples: {len(predictions)}")
         print(f"Anomalies detected: {n_anomalies} ({anomaly_rate:.2f}%)")
         print(f"Normal samples: {(predictions == 1).sum()} ({100-anomaly_rate:.2f}%)")
@@ -349,7 +348,6 @@ def analyze_dataset(file_path, window_name, nu=0.1, kernel='rbf', output_dir=Non
     
     print("\n" + "="*100)
     print(f"ANALYZING: {window_name}")
-    print("="*100)
     
     # Load data
     df = pd.read_csv(file_path)
@@ -403,7 +401,6 @@ def compare_kernels(file_path, window_name, nu=0.1, output_dir=None):
     
     print("\n" + "="*100)
     print(f"KERNEL COMPARISON FOR: {window_name}")
-    print("="*100)
     
     df = pd.read_csv(file_path)
     
@@ -446,11 +443,8 @@ def main():
     """
     Main execution function
     """
-    print("="*100)
     print("ONE-CLASS SVM ANOMALY DETECTION FOR STRESS AND ANXIETY")
-    print("="*100)
     
-    # Define datasets - UPDATE TO YOUR LOCAL PATHS
     ml_dir = "/Users/YusMolina/Downloads/smieae/data/ml_ready"
     
     datasets = {
@@ -464,18 +458,16 @@ def main():
     # Diagnostic: Check files exist
     print("\n" + "="*100)
     print("FILE DIAGNOSTICS")
-    print("="*100)
     for window_name, file_path in datasets.items():
         if os.path.exists(file_path):
             df_check = pd.read_csv(file_path, nrows=1, quoting=1)
             
             has_stress = 'q_i_stress_sliderNeutralPos' in df_check.columns 
             has_anxiety = 'q_i_anxiety_sliderNeutralPos' in df_check.columns
-            print(f"✓ {window_name:20s}: {file_path}")
+            print(f" {window_name:20s}: {file_path}")
             print(f"  Columns: {len(df_check.columns)}, Has Stress: {has_stress}, Has Anxiety: {has_anxiety}")
         else:
-            print(f"✗ {window_name:20s}: FILE NOT FOUND - {file_path}")
-    print("="*100)
+            print(f" {window_name:20s}: FILE NOT FOUND - {file_path}")
     
     # Store results
     all_results = {}
@@ -510,7 +502,6 @@ def main():
     # Summary comparison
     print("\n" + "="*100)
     print("SUMMARY COMPARISON ACROSS ALL WINDOWS (ONE-CLASS SVM)")
-    print("="*100)
     
     summary_data = []
     for window_name, results_df in all_results.items():
@@ -564,8 +555,6 @@ def main():
     print(f"\nSummary saved: {summary_path}")
     
     print("\n" + "="*100)
-    print("ONE-CLASS SVM ANALYSIS COMPLETE!")
-    print("="*100)
     print(f"\nAll results saved to: {output_dir}")
     print("\nGenerated files:")
     print("  - ocsvm_results_{window}.csv (for each window)")

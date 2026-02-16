@@ -31,7 +31,6 @@ TIMESTAMP_COL = "timeStampStart"  # canonical timestamp for analysis
 CLEANED_FILENAME = "daily_questions_cleaned.csv"
 
 DAY_CUTOFF_HOUR = 2  # before this hour -> previous day
-# --------------------------
 
 
 def pick_first_matching(columns: list[str], patterns: list[str]) -> str | None:
@@ -76,7 +75,6 @@ def main() -> int:
     )
     df["date_only"] = df["timestamp_for_day"].dt.date
     df["weekday"] = df["timestamp_for_day"].dt.day_name()
-    # -----------------
 
     # (Optional) Ensure stress/anxiety columns exist; keep them for EDA
     stress_col = pick_first_matching(list(df.columns), [r"stress", r"estr[eé]s"])
@@ -98,9 +96,6 @@ def main() -> int:
         "timeZoneOffset",
     ]
     df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors="ignore")
-
-    # If you don't want to keep timestamp_for_day, drop it here:
-    # df = df.drop(columns=["timestamp_for_day"])
 
     # Sort and export
     df = df.sort_values(["userid", "timestamp"])

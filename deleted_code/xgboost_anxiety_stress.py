@@ -17,23 +17,17 @@ try:
 except:
     HAS_LGBM = False
 
-print("="*80)
 print("ENHANCED ML MODEL: STRESS & ANXIETY PREDICTION")
-print("="*80)
 
-# ============================================================================
-# STEP 1: LOAD DATA
-# ============================================================================
+# LOAD DATA
 
-print("\n[1/7] Loading data...")
+print("\nLoading data...")
 df = pd.read_csv('/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/combined_daily_data_with_log_transforms.csv')
-print(f"✓ Dataset loaded: {df.shape}")
+print(f" Dataset loaded: {df.shape}")
 
-# ============================================================================
-# STEP 2: FEATURE ENGINEERING
-# ============================================================================
+# FEATURE ENGINEERING
 
-print("\n[2/7] Engineering new features...")
+print("\nEngineering new features...")
 
 # Separate features and targets first
 X_original = df.drop(['stress_level', 'anxiety_level'], axis=1)
@@ -46,7 +40,7 @@ X_original = X_original[valid_mask]
 y_stress = y_stress[valid_mask]
 y_anxiety = y_anxiety[valid_mask]
 
-print(f"✓ Valid samples: {len(X_original)}")
+print(f" Valid samples: {len(X_original)}")
 
 # Create engineered features
 X_engineered = X_original.copy()
@@ -54,28 +48,28 @@ X_engineered = X_original.copy()
 # 1. Activity ratios
 if 'daily_total_steps' in X_engineered.columns and 'activity_level_sedentary_count' in X_engineered.columns:
     X_engineered['activity_sedentary_ratio'] = X_engineered['activity_level_sedentary_count'] / (X_engineered['daily_total_steps'] + 1)
-    print("  ✓ Created activity_sedentary_ratio")
+    print("   Created activity_sedentary_ratio")
 
 # 2. Heart rate range and variability
 hr_cols = [col for col in X_engineered.columns if 'heart_rate_activity' in col and not '_log' in col]
 if len(hr_cols) >= 2:
     if 'heart_rate_activity_beats per minute_max' in X_engineered.columns and 'heart_rate_activity_beats per minute_min' in X_engineered.columns:
         X_engineered['heart_rate_range'] = X_engineered['heart_rate_activity_beats per minute_max'] - X_engineered['heart_rate_activity_beats per minute_min']
-        print("  ✓ Created heart_rate_range")
+        print("   Created heart_rate_range")
 
 # 3. Sleep efficiency indicators (if not using log version)
 if 'sleep_global_duration' in X_engineered.columns and 'sleep_global_minutesAwake_log' in X_engineered.columns:
     # Convert log back for this calculation
     minutesAwake = np.expm1(X_engineered['sleep_global_minutesAwake_log'])
     X_engineered['sleep_quality_score'] = X_engineered['sleep_global_duration'] / (minutesAwake + 1)
-    print("  ✓ Created sleep_quality_score")
+    print("   Created sleep_quality_score")
 
 # 4. HRV complexity
 if 'hrv_details_rmssd_std_log' in X_engineered.columns and 'hrv_details_rmssd_mean' in X_engineered.columns:
     # Coefficient of variation for HRV
     rmssd_std = np.expm1(X_engineered['hrv_details_rmssd_std_log'])
     X_engineered['hrv_coefficient_variation'] = rmssd_std / (X_engineered['hrv_details_rmssd_mean'] + 1)
-    print("  ✓ Created hrv_coefficient_variation")
+    print("   Created hrv_coefficient_variation")
 
 # 5. Physiological stress index (combine HR and respiratory rate)
 if 'heart_rate_activity_beats per minute_mean' in X_engineered.columns and 'daily_respiratory_rate_daily_respiratory_rate' in X_engineered.columns:
@@ -83,7 +77,7 @@ if 'heart_rate_activity_beats per minute_mean' in X_engineered.columns and 'dail
     hr_norm = (X_engineered['heart_rate_activity_beats per minute_mean'] - X_engineered['heart_rate_activity_beats per minute_mean'].mean()) / X_engineered['heart_rate_activity_beats per minute_mean'].std()
     rr_norm = (X_engineered['daily_respiratory_rate_daily_respiratory_rate'] - X_engineered['daily_respiratory_rate_daily_respiratory_rate'].mean()) / X_engineered['daily_respiratory_rate_daily_respiratory_rate'].std()
     X_engineered['physiological_arousal_index'] = (hr_norm + rr_norm) / 2
-    print("  ✓ Created physiological_arousal_index")
+    print("   Created physiological_arousal_index")
 
 # 6. Activity level diversity (entropy-like measure)
 activity_cols = [col for col in X_engineered.columns if 'activity_level_' in col and 'count' in col]
@@ -94,15 +88,13 @@ if len(activity_cols) >= 3:
         prop = X_engineered[col] / (activity_total + 1)
         activity_diversity -= prop * np.log(prop + 1e-10)
     X_engineered['activity_diversity'] = activity_diversity
-    print("  ✓ Created activity_diversity")
+    print("   Created activity_diversity")
 
-print(f"\n✓ Total features after engineering: {X_engineered.shape[1]} (added {X_engineered.shape[1] - X_original.shape[1]})")
+print(f"\n Total features after engineering: {X_engineered.shape[1]} (added {X_engineered.shape[1] - X_original.shape[1]})")
 
-# ============================================================================
-# STEP 3: HANDLE MISSING DATA
-# ============================================================================
+# HANDLE MISSING DATA
 
-print("\n[3/7] Handling missing data and infinities...")
+print("\nHandling missing data and infinities...")
 
 # Replace infinities
 X_engineered = X_engineered.replace([np.inf, -np.inf], np.nan)
@@ -115,14 +107,12 @@ X_imputed = pd.DataFrame(
     index=X_engineered.index
 )
 
-print(f"✓ Imputation complete")
+print(f" Imputation complete")
 print(f"  Remaining NaN: {X_imputed.isna().sum().sum()}")
 
-# ============================================================================
-# STEP 4: FEATURE SCALING
-# ============================================================================
+# FEATURE SCALING
 
-print("\n[4/7] Scaling features...")
+print("\nScaling features...")
 
 scaler = StandardScaler()
 X_scaled = pd.DataFrame(
@@ -131,13 +121,11 @@ X_scaled = pd.DataFrame(
     index=X_imputed.index
 )
 
-print("✓ Features standardized (mean=0, std=1)")
+print(" Features standardized (mean=0, std=1)")
 
-# ============================================================================
-# STEP 5: TRY MULTIPLE MODELS
-# ============================================================================
+# TRY MULTIPLE MODELS
 
-print("\n[5/7] Training multiple models...")
+print("\nTraining multiple models...")
 
 # Split data
 X_train, X_test, y_train_stress, y_test_stress = train_test_split(
@@ -200,36 +188,30 @@ for model_name, model in models.items():
     print(f"    Stress R²: {stress_r2:.3f}, RMSE: {stress_rmse:.2f}")
     print(f"    Anxiety R²: {anxiety_r2:.3f}, RMSE: {anxiety_rmse:.2f}")
 
-# ============================================================================
-# STEP 6: RESULTS COMPARISON
-# ============================================================================
+# RESULTS COMPARISON
 
-print("\n[6/7] Comparing model performance...")
+print("\nComparing model performance...")
 
 results_df = pd.DataFrame(results)
 
 print("\n" + "="*80)
 print("MODEL COMPARISON - STRESS PREDICTION")
-print("="*80)
 print(results_df[['Model', 'Stress_R2', 'Stress_RMSE', 'Stress_MAE']].to_string(index=False))
 
 print("\n" + "="*80)
 print("MODEL COMPARISON - ANXIETY PREDICTION")
-print("="*80)
 print(results_df[['Model', 'Anxiety_R2', 'Anxiety_RMSE', 'Anxiety_MAE']].to_string(index=False))
 
 # Find best models
 best_stress_model = results_df.loc[results_df['Stress_R2'].idxmax(), 'Model']
 best_anxiety_model = results_df.loc[results_df['Anxiety_R2'].idxmax(), 'Model']
 
-print(f"\n🏆 Best for Stress: {best_stress_model} (R² = {results_df['Stress_R2'].max():.3f})")
-print(f"🏆 Best for Anxiety: {best_anxiety_model} (R² = {results_df['Anxiety_R2'].max():.3f})")
+print(f"\n Best for Stress: {best_stress_model} (R² = {results_df['Stress_R2'].max():.3f})")
+print(f" Best for Anxiety: {best_anxiety_model} (R² = {results_df['Anxiety_R2'].max():.3f})")
 
-# ============================================================================
-# STEP 7: CLASSIFICATION APPROACH (ALTERNATIVE)
-# ============================================================================
+# CLASSIFICATION APPROACH (ALTERNATIVE)
 
-print("\n[7/7] Trying classification approach (Low/Medium/High)...")
+print("\nTrying classification approach (Low/Medium/High)...")
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
@@ -264,46 +246,43 @@ y_pred_anxiety_c = clf_anxiety.predict(X_test_c)
 stress_acc = accuracy_score(y_test_stress_c, y_pred_stress_c)
 anxiety_acc = accuracy_score(y_test_anxiety_c, y_pred_anxiety_c)
 
-print(f"\n✓ Classification Results:")
+print(f"\n Classification Results:")
 print(f"  Stress classification accuracy: {stress_acc:.1%}")
 print(f"  Anxiety classification accuracy: {anxiety_acc:.1%}")
 print(f"\n  (Baseline = 33.3% if guessing randomly)")
 
-# ============================================================================
-# STEP 8: SAVE RESULTS
-# ============================================================================
+# SAVE RESULTS
 
 base_path = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/anova/'
 results_df.to_csv(f'{base_path}enhanced_model_comparison.csv', index=False)
 
 print("\n" + "="*80)
 print("ANALYSIS COMPLETE")
-print("="*80)
 
-print("\n📊 KEY INSIGHTS:")
+print("\n KEY INSIGHTS:")
 if results_df['Stress_R2'].max() < 0.10:
-    print("\n⚠️  STRESS PREDICTION:")
+    print("\n  STRESS PREDICTION:")
     print("  • Very weak predictive power (R² < 10%)")
     print("  • Physiological variables alone are insufficient")
     print("  • Consider: temporal patterns, context, psychological factors")
 else:
-    print(f"\n✓ STRESS PREDICTION: R² = {results_df['Stress_R2'].max():.1%}")
+    print(f"\n STRESS PREDICTION: R² = {results_df['Stress_R2'].max():.1%}")
 
 if results_df['Anxiety_R2'].max() < 0.15:
-    print("\n⚠️  ANXIETY PREDICTION:")
+    print("\n  ANXIETY PREDICTION:")
     print("  • Weak to moderate predictive power")
     print("  • Some physiological signal present but incomplete")
     print("  • Respiratory rate likely most important")
 else:
-    print(f"\n✓ ANXIETY PREDICTION: R² = {results_df['Anxiety_R2'].max():.1%}")
+    print(f"\n ANXIETY PREDICTION: R² = {results_df['Anxiety_R2'].max():.1%}")
 
 if stress_acc > 0.40 or anxiety_acc > 0.40:
-    print(f"\n💡 CLASSIFICATION APPROACH:")
+    print(f"\n CLASSIFICATION APPROACH:")
     print(f"  • Predicting categories works better than exact values")
     print(f"  • Stress: {stress_acc:.1%} accuracy")
     print(f"  • Anxiety: {anxiety_acc:.1%} accuracy")
 
-print("\n💡 RECOMMENDATIONS:")
+print("\n RECOMMENDATIONS:")
 print("  1. Collect temporal/contextual features (time of day, day of week)")
 print("  2. Use person-specific models (train separately per individual)")
 print("  3. Consider time-series features (rolling averages, trends)")

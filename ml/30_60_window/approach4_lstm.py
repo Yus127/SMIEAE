@@ -16,10 +16,8 @@ import joblib
 import warnings
 warnings.filterwarnings('ignore')
 
-print("="*80)
 print("BI-LSTM BINARY CLASSIFICATION - MEDIAN SPLIT (TIME-BASED SPLIT)")
 print("30MIN & 60MIN WINDOWS - SEPARATE PROCESSING")
-print("="*80)
 
 np.random.seed(42)
 tf.random.set_seed(42)
@@ -40,9 +38,7 @@ files = [
 # Store overall results
 all_results = {}
 
-# ============================================================================
 # HELPER FUNCTIONS
-# ============================================================================
 
 def create_sequences_median(df, target_col, feature_cols, sequence_length=3):
     """
@@ -56,16 +52,16 @@ def create_sequences_median(df, target_col, feature_cols, sequence_length=3):
     print(f"{'='*80}")
     
     df_clean = df[df[target_col].notna()].copy()
-    print(f"✓ Data with {target_col}: {len(df_clean)} observations")
+    print(f" Data with {target_col}: {len(df_clean)} observations")
     
     # MEDIAN split (simple, keeps ALL data)
     median = df_clean[target_col].median()
     df_clean['target_binary'] = (df_clean[target_col] >= median).astype(int)
     
-    print(f"✓ MEDIAN split: threshold = {median:.2f}")
+    print(f" MEDIAN split: threshold = {median:.2f}")
     print(f"  Low (< {median:.2f}):  {np.sum(df_clean['target_binary']==0)} samples ({np.sum(df_clean['target_binary']==0)/len(df_clean)*100:.1f}%)")
     print(f"  High (≥ {median:.2f}): {np.sum(df_clean['target_binary']==1)} samples ({np.sum(df_clean['target_binary']==1)/len(df_clean)*100:.1f}%)")
-    print(f"✓ KEEPING ALL DATA (no middle exclusion)")
+    print(f" KEEPING ALL DATA (no middle exclusion)")
     
     sequences = []
     targets = []
@@ -94,7 +90,7 @@ def create_sequences_median(df, target_col, feature_cols, sequence_length=3):
     user_ids = np.array(user_ids)
     timestamps = np.array(timestamps)
     
-    print(f"✓ Created {len(sequences)} sequences from {len(df_clean['userid'].unique())} users")
+    print(f" Created {len(sequences)} sequences from {len(df_clean['userid'].unique())} users")
     print(f"  Sequences per user: {len(sequences) / len(df_clean['userid'].unique()):.1f} avg")
     print(f"  Final distribution: Low={np.sum(y==0)} ({np.sum(y==0)/len(y)*100:.1f}%), High={np.sum(y==1)} ({np.sum(y==1)/len(y)*100:.1f}%)")
     
@@ -129,13 +125,13 @@ def time_based_split(X, y, timestamps, train_ratio=0.70, val_ratio=0.15):
     X_test = X[train_size+val_size:]
     y_test = y[train_size+val_size:]
     
-    print(f"✓ Train: {len(X_train)} sequences (Low={np.sum(y_train==0)}, High={np.sum(y_train==1)})")
+    print(f" Train: {len(X_train)} sequences (Low={np.sum(y_train==0)}, High={np.sum(y_train==1)})")
     print(f"  Class balance: Low={np.sum(y_train==0)/len(y_train)*100:.1f}%, High={np.sum(y_train==1)/len(y_train)*100:.1f}%")
     
-    print(f"\n✓ Val:   {len(X_val)} sequences (Low={np.sum(y_val==0)}, High={np.sum(y_val==1)})")
+    print(f"\n Val:   {len(X_val)} sequences (Low={np.sum(y_val==0)}, High={np.sum(y_val==1)})")
     print(f"  Class balance: Low={np.sum(y_val==0)/len(y_val)*100:.1f}%, High={np.sum(y_val==1)/len(y_val)*100:.1f}%")
     
-    print(f"\n✓ Test:  {len(X_test)} sequences (Low={np.sum(y_test==0)}, High={np.sum(y_test==1)})")
+    print(f"\n Test:  {len(X_test)} sequences (Low={np.sum(y_test==0)}, High={np.sum(y_test==1)})")
     print(f"  Class balance: Low={np.sum(y_test==0)/len(y_test)*100:.1f}%, High={np.sum(y_test==1)/len(y_test)*100:.1f}%")
     
     return X_train, X_val, X_test, y_train, y_val, y_test
@@ -170,8 +166,8 @@ def normalize_sequences(X_train, X_val, X_test):
     X_val = X_val_flat.reshape(-1, n_timesteps, n_features)
     X_test = X_test_flat.reshape(-1, n_timesteps, n_features)
     
-    print(f"✓ Applied median imputation and standard scaling")
-    print(f"✓ Final shapes: Train={X_train.shape}, Val={X_val.shape}, Test={X_test.shape}")
+    print(f" Applied median imputation and standard scaling")
+    print(f" Final shapes: Train={X_train.shape}, Val={X_val.shape}, Test={X_test.shape}")
     
     return X_train, X_val, X_test, scaler, imputer
 
@@ -320,9 +316,7 @@ def create_visualizations(history, y_test, y_test_pred, y_test_proba, cm, target
                 dpi=300, bbox_inches='tight')
     plt.close()
 
-# ============================================================================
 # MAIN PROCESSING LOOP
-# ============================================================================
 
 for file_idx, file in enumerate(files):
     window_type = "30min" if "30min" in file else "60min"
@@ -330,26 +324,23 @@ for file_idx, file in enumerate(files):
     
     print("\n" + "="*80)
     print(f"PROCESSING: {window_type.upper()} WINDOW")
-    print("="*80)
     
     # Create window-specific output directory
     window_output_dir = os.path.join(output_dir, f"{window_type}_window")
     os.makedirs(window_output_dir, exist_ok=True)
     os.makedirs(os.path.join(window_output_dir, "plots"), exist_ok=True)
     
-    # ========================================================================
     # 1. LOAD DATA
-    # ========================================================================
     print(f"\n1. LOADING DATA ({window_type})")
     print("-"*80)
     
     data_file = os.path.join(ml_dir, file)
     if not os.path.exists(data_file):
-        print(f"✗ File not found: {data_file}")
+        print(f" File not found: {data_file}")
         continue
     
     df = pd.read_csv(data_file)
-    print(f"✓ Loaded {len(df)} observations")
+    print(f" Loaded {len(df)} observations")
     
     # Ensure userid column exists
     if 'userid' not in df.columns:
@@ -364,10 +355,10 @@ for file_idx, file in enumerate(files):
     # Sort by timestamp (critical for time series)
     if 'timestamp' in df.columns:
         df = df.sort_values(['userid', 'timestamp']).reset_index(drop=True)
-        print("✓ Data sorted by user and timestamp (chronological order)")
+        print(" Data sorted by user and timestamp (chronological order)")
     else:
         df = df.sort_values('userid').reset_index(drop=True)
-        print("⚠ Warning: No timestamp column, sorted by userid only")
+        print(" Warning: No timestamp column, sorted by userid only")
     
     # Define features
     feature_columns = [
@@ -408,23 +399,21 @@ for file_idx, file in enumerate(files):
     targets_to_process = []
     if stress_target:
         targets_to_process.append(('Stress', stress_target))
-        print(f"✓ Stress target: {stress_target}")
+        print(f" Stress target: {stress_target}")
     if anxiety_target:
         targets_to_process.append(('Anxiety', anxiety_target))
-        print(f"✓ Anxiety target: {anxiety_target}")
+        print(f" Anxiety target: {anxiety_target}")
     
     if not targets_to_process:
-        print("✗ No stress or anxiety targets found!")
+        print(" No stress or anxiety targets found!")
         continue
     
-    print(f"\n✓ Will train models for {len(targets_to_process)} target(s): {', '.join([t[0] for t in targets_to_process])}")
+    print(f"\n Will train models for {len(targets_to_process)} target(s): {', '.join([t[0] for t in targets_to_process])}")
     
     # Store results for this window
     all_results[window_type] = {}
     
-    # ========================================================================
     # PROCESS EACH TARGET
-    # ========================================================================
     
     for target_name, primary_target in targets_to_process:
         
@@ -437,9 +426,7 @@ for file_idx, file in enumerate(files):
         os.makedirs(target_output_dir, exist_ok=True)
         os.makedirs(os.path.join(target_output_dir, "plots"), exist_ok=True)
         
-        # ====================================================================
         # 2. PREPARE DATA
-        # ====================================================================
         print(f"\n2. DATA PREPARATION ({target_name} - {window_type})")
         print("-"*80)
         
@@ -452,11 +439,9 @@ for file_idx, file in enumerate(files):
                 median_val = df_clean[col].median()
                 df_clean.loc[:, col] = df_clean[col].fillna(median_val)
         
-        print(f"✓ Clean dataset: {len(df_clean)} observations from {df_clean['userid'].nunique()} users")
+        print(f" Clean dataset: {len(df_clean)} observations from {df_clean['userid'].nunique()} users")
         
-        # ====================================================================
         # 3. USER-SPECIFIC FEATURES
-        # ====================================================================
         print(f"\n3. CREATING USER-SPECIFIC FEATURES ({target_name})")
         print("-"*80)
         
@@ -478,39 +463,29 @@ for file_idx, file in enumerate(files):
         
         enhanced_features = available_features + ['hr_deviation', 'steps_ratio']
         
-        print(f"✓ Enhanced features: {len(enhanced_features)}")
+        print(f" Enhanced features: {len(enhanced_features)}")
         
-        # ====================================================================
         # 4. CREATE SEQUENCES WITH MEDIAN SPLIT
-        # ====================================================================
         seq_length = 3
         X, y, user_ids, timestamps, median = create_sequences_median(
             df_clean, primary_target, enhanced_features, sequence_length=seq_length
         )
         
-        # ====================================================================
         # 5. TIME-BASED SPLIT (70-15-15)
-        # ====================================================================
         X_train, X_val, X_test, y_train, y_val, y_test = time_based_split(
             X, y, timestamps, train_ratio=0.70, val_ratio=0.15
         )
         
-        # ====================================================================
         # 6. NORMALIZE
-        # ====================================================================
         X_train, X_val, X_test, scaler, imputer = normalize_sequences(X_train, X_val, X_test)
         
-        # ====================================================================
         # 7. CLASS WEIGHTS
-        # ====================================================================
         class_weights_array = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
         class_weight_dict = {i: class_weights_array[i] for i in range(len(class_weights_array))}
         
-        print(f"\n✓ Class weights: {class_weight_dict}")
+        print(f"\n Class weights: {class_weight_dict}")
         
-        # ====================================================================
         # 8. BUILD MODEL
-        # ====================================================================
         print(f"\n{'='*80}")
         print(f"BUILDING BI-LSTM MODEL ({target_name})")
         print(f"{'='*80}")
@@ -520,9 +495,7 @@ for file_idx, file in enumerate(files):
         
         model.summary()
         
-        # ====================================================================
         # 9. CALLBACKS
-        # ====================================================================
         callbacks = [
             EarlyStopping(
                 monitor='val_loss', 
@@ -545,9 +518,7 @@ for file_idx, file in enumerate(files):
             )
         ]
         
-        # ====================================================================
         # 10. TRAIN
-        # ====================================================================
         print(f"\n{'='*80}")
         print(f"TRAINING {target_name.upper()}")
         print(f"{'='*80}")
@@ -562,11 +533,9 @@ for file_idx, file in enumerate(files):
             verbose=2
         )
         
-        print(f"\n✓ Training complete!")
+        print(f"\n Training complete!")
         
-        # ====================================================================
         # 11. PREDICT
-        # ====================================================================
         y_train_proba = model.predict(X_train, verbose=0).flatten()
         y_train_pred = (y_train_proba >= 0.5).astype(int)
         
@@ -576,16 +545,12 @@ for file_idx, file in enumerate(files):
         y_test_proba = model.predict(X_test, verbose=0).flatten()
         y_test_pred = (y_test_proba >= 0.5).astype(int)
         
-        # ====================================================================
         # 12. CALCULATE METRICS
-        # ====================================================================
         train_metrics = calculate_metrics(y_train, y_train_pred, y_train_proba)
         val_metrics = calculate_metrics(y_val, y_val_pred, y_val_proba)
         test_metrics = calculate_metrics(y_test, y_test_pred, y_test_proba)
         
-        # ====================================================================
         # 13. PRINT RESULTS
-        # ====================================================================
         print(f"\n{'='*80}")
         print(f"{target_name.upper()} RESULTS ({window_type})")
         print(f"{'='*80}")
@@ -619,11 +584,11 @@ for file_idx, file in enumerate(files):
         print(f"\nTrain-Test Gap: {gap:.4f}")
         
         if gap <= 0.10:
-            print("  ✓ Excellent generalization (gap ≤ 0.10)")
+            print("   Excellent generalization (gap ≤ 0.10)")
         elif gap <= 0.15:
-            print("  ✓ Good generalization (gap ≤ 0.15)")
+            print("   Good generalization (gap ≤ 0.15)")
         else:
-            print("  ⚠ Moderate overfitting (gap > 0.15)")
+            print("   Moderate overfitting (gap > 0.15)")
         
         # Classification report
         print(f"\n{'-'*80}")
@@ -646,21 +611,17 @@ for file_idx, file in enumerate(files):
             print(f"  Low (Class 0):  {low_acc:.4f}")
             print(f"  High (Class 1): {high_acc:.4f}")
         
-        # ====================================================================
         # 14. CREATE VISUALIZATIONS
-        # ====================================================================
-        print(f"\n✓ Creating visualizations...")
+        print(f"\n Creating visualizations...")
         create_visualizations(history, y_test, y_test_pred, y_test_proba, cm, 
                             target_name, window_type, target_output_dir)
         
-        # ====================================================================
         # 15. SAVE MODEL AND ARTIFACTS
-        # ====================================================================
         model.save(os.path.join(target_output_dir, f'{target_name.lower()}_final_model.keras'))
         joblib.dump(scaler, os.path.join(target_output_dir, f'{target_name.lower()}_scaler.pkl'))
         joblib.dump(imputer, os.path.join(target_output_dir, f'{target_name.lower()}_imputer.pkl'))
         
-        print(f"✓ Saved model, scaler, and imputer")
+        print(f" Saved model, scaler, and imputer")
         
         # Store results
         all_results[window_type][target_name] = {
@@ -687,18 +648,15 @@ for file_idx, file in enumerate(files):
         # Save individual results
         results_df = pd.DataFrame([all_results[window_type][target_name]])
         results_df.to_csv(os.path.join(target_output_dir, 'bilstm_results.csv'), index=False)
-        print("✓ Saved: bilstm_results.csv")
+        print(" Saved: bilstm_results.csv")
         
         print("\n" + "#"*80)
-        print(f"# ✅ COMPLETE: {target_name} ({window_type})")
+        print(f"#  COMPLETE: {target_name} ({window_type})")
         print("#"*80)
 
-# ============================================================================
 # OVERALL COMPARISON
-# ============================================================================
 print("\n\n" + "="*80)
 print("OVERALL COMPARISON: STRESS vs ANXIETY (30MIN vs 60MIN)")
-print("="*80)
 
 if all_results:
     print("\n" + "-"*80)
@@ -750,7 +708,6 @@ if all_results:
     if summary_data:
         summary_df = pd.DataFrame(summary_data)
         summary_df.to_csv(os.path.join(output_dir, 'overall_bilstm_timeseries_summary.csv'), index=False)
-        print("\n✓ Saved: overall_bilstm_timeseries_summary.csv")
+        print("\n Saved: overall_bilstm_timeseries_summary.csv")
 
 
-print("✅ COMPLETE! All windows and targets processed.")

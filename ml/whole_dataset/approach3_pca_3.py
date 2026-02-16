@@ -15,29 +15,23 @@ import warnings
 warnings.filterwarnings('ignore')
 import os
 
-# HARDCODED PATHS
 INPUT_PATH = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/data_with_exam_features.csv'
 OUTPUT_PATH = '/Users/YusMolina/Downloads/smieae/results/whole_dataset/random_split/model3/model_results_pca_3class_regularized.csv'
 ROC_OUTPUT_PATH = '/Users/YusMolina/Downloads/smieae/results/whole_dataset/random_split/model3/roc_curves.png'
 os.makedirs('/Users/YusMolina/Downloads/smieae/results/whole_dataset/random_split/model3', exist_ok=True)
 
-print("="*80)
 print("3-CLASS CLASSIFICATION - STRONGLY REGULARIZED")
 print("Train: 70% | Validation: 15% | Test: 15%")
-print("="*80)
 
 # Load data
 print("\nLoading data...")
 df = pd.read_csv(INPUT_PATH)
 print(f"Dataset loaded: {len(df)} rows, {len(df.columns)} columns")
 
-# ============================================================================
 # FEATURE ENGINEERING
-# ============================================================================
 
 print("\n" + "="*80)
 print("FEATURE ENGINEERING")
-print("="*80)
 
 print("\nCalculating personal baselines...")
 user_baselines = df.groupby('userid').agg({
@@ -83,9 +77,7 @@ advanced_features = [
 
 print(f"Using {len(advanced_features)} features")
 
-# ============================================================================
 # PREPARE DATA WITH PCA
-# ============================================================================
 
 def create_target_classes(series, p33, p67):
     classes = pd.cut(series, bins=[-np.inf, p33, p67, np.inf], labels=[0, 1, 2])
@@ -133,9 +125,7 @@ def prepare_data_with_pca(df, target_col, feature_cols, n_components=0.80):
     
     return X_train_pca, X_val_pca, X_test_pca, y_train, y_val, y_test, p33, p67, pca
 
-# ============================================================================
 # PLOT ROC CURVES
-# ============================================================================
 
 def plot_roc_curves(models_dict, X_test, y_test, target_name, n_classes=3):
     """
@@ -200,9 +190,7 @@ def plot_roc_curves(models_dict, X_test, y_test, target_name, n_classes=3):
     plt.tight_layout()
     return fig
 
-# ============================================================================
 # TRAIN STRONGLY REGULARIZED MODELS
-# ============================================================================
 
 def train_evaluate_models(X_train, X_val, X_test, y_train, y_val, y_test, target_name):
     print(f"\n{'='*80}")
@@ -272,7 +260,7 @@ def train_evaluate_models(X_train, X_val, X_test, y_train, y_val, y_test, target
         }
         
         gap = train_acc - test_acc
-        status = "✓" if gap <= 0.05 else "⚠️"
+        status = "" if gap <= 0.05 else ""
         print(f"{status} Train:{train_acc:.4f} Val:{val_acc:.4f} Test:{test_acc:.4f} F1:{test_f1:.4f} Gap:{gap:.4f}")
         print(confusion_matrix(y_test, model.predict(X_test)))
     
@@ -306,15 +294,13 @@ def train_evaluate_models(X_train, X_val, X_test, y_train, y_val, y_test, target
     }
     
     gap_ens = train_acc_ens - test_acc_ens
-    status = "✓" if gap_ens <= 0.05 else "⚠️"
+    status = "" if gap_ens <= 0.05 else ""
     print(f"{status} Train:{train_acc_ens:.4f} Val:{val_acc_ens:.4f} Test:{test_acc_ens:.4f} F1:{test_f1_ens:.4f} Gap:{gap_ens:.4f}")
     print(confusion_matrix(y_test, voting_clf.predict(X_test)))
     
     return results, trained_models
 
-# ============================================================================
 # EXECUTE
-# ============================================================================
 
 X_train_stress, X_val_stress, X_test_stress, y_train_stress, y_val_stress, y_test_stress, p33_stress, p67_stress, pca_stress = prepare_data_with_pca(df, 'stress_level', advanced_features, n_components=0.80)
 stress_results, stress_models = train_evaluate_models(X_train_stress, X_val_stress, X_test_stress, y_train_stress, y_val_stress, y_test_stress, "STRESS")
@@ -322,13 +308,10 @@ stress_results, stress_models = train_evaluate_models(X_train_stress, X_val_stre
 X_train_anxiety, X_val_anxiety, X_test_anxiety, y_train_anxiety, y_val_anxiety, y_test_anxiety, p33_anxiety, p67_anxiety, pca_anxiety = prepare_data_with_pca(df, 'anxiety_level', advanced_features, n_components=0.80)
 anxiety_results, anxiety_models = train_evaluate_models(X_train_anxiety, X_val_anxiety, X_test_anxiety, y_train_anxiety, y_val_anxiety, y_test_anxiety, "ANXIETY")
 
-# ============================================================================
 # GENERATE ROC CURVES
-# ============================================================================
 
 print("\n" + "="*80)
 print("GENERATING ROC CURVES")
-print("="*80)
 
 # Create a combined figure with stress and anxiety
 fig = plt.figure(figsize=(20, 14))
@@ -415,13 +398,10 @@ plt.savefig(ROC_OUTPUT_PATH, dpi=300, bbox_inches='tight')
 print(f"\nROC curves saved to: {ROC_OUTPUT_PATH}")
 plt.close()
 
-# ============================================================================
 # SUMMARY
-# ============================================================================
 
 print("\n" + "="*80)
 print("FINAL SUMMARY")
-print("="*80)
 
 print("\nSTRESS:")
 for name, m in stress_results.items():
@@ -438,7 +418,6 @@ best_anxiety = max(anxiety_results.items(), key=lambda x: x[1]['val_accuracy'])
 
 print("\n" + "="*80)
 print("BEST MODELS (by validation accuracy)")
-print("="*80)
 print(f"\nStress:  {best_stress[0]} - Val:{best_stress[1]['val_accuracy']:.4f} Test:{best_stress[1]['test_accuracy']:.4f}")
 print(f"Anxiety: {best_anxiety[0]} - Val:{best_anxiety[1]['val_accuracy']:.4f} Test:{best_anxiety[1]['test_accuracy']:.4f}")
 

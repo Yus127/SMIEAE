@@ -35,7 +35,6 @@ import matplotlib.pyplot as plt
 # --- CONFIG (edit here) ---
 CLEANED_CSV = r"/Users/YusMolina/Downloads/smieae/data/data_clean/daily_questions_cleaned.csv"
 OUTPUT_DIR = r"/Users/YusMolina/Downloads/smieae/data/data_clean/stress_anxiety_EDA"
-# --------------------------
 
 
 def pick_first_matching(columns: list[str], patterns: list[str]) -> str | None:
@@ -99,9 +98,7 @@ def main() -> int:
     # Valid rows
     d = df.dropna(subset=["timestamp", "date_only", stress_col, anxiety_col]).copy()
 
-    # -------------------------
     # EDA tables
-    # -------------------------
     overall_desc = (
         d[[stress_col, anxiety_col]]
         .apply(pd.to_numeric, errors="coerce")
@@ -139,9 +136,7 @@ def main() -> int:
     weekday_stats.to_csv(out_dir / "eda_weekday_stats.csv", index=False)
     print(f"[OK] Wrote: {out_dir / 'eda_weekday_stats.csv'}")
 
-    # -------------------------
     # Plots
-    # -------------------------
 
   
 

@@ -259,7 +259,7 @@ class FitbitDBSCANProcessor:
             if cluster_stats['cluster_sizes']:
                 print(f"  Cluster distribution: {cluster_stats['cluster_sizes']}")
             elif cluster_stats['n_clusters'] == 0:
-                print(f"  ⚠️  WARNING: All points classified as noise. Try increasing eps or decreasing min_samples.")
+                print(f"    WARNING: All points classified as noise. Try increasing eps or decreasing min_samples.")
             
         except Exception as e:
             import traceback
@@ -379,7 +379,6 @@ if __name__ == "__main__":
     # Print comprehensive summary
     print("\n" + "="*60)
     print("PROCESSING COMPLETE - SUMMARY")
-    print("="*60)
     
     successful = 0
     failed = 0
@@ -391,12 +390,12 @@ if __name__ == "__main__":
             n_clusters = result['cluster_stats']['n_clusters']
             total_clusters += n_clusters
             print(f"\n{filename}:")
-            print(f"  ✓ Clusters: {n_clusters}")
-            print(f"  ✓ Noise: {result['cluster_stats']['noise_percentage']:.1f}%")
-            print(f"  ✓ Variables: {result['prep_stats']['columns_used']}")
+            print(f"   Clusters: {n_clusters}")
+            print(f"   Noise: {result['cluster_stats']['noise_percentage']:.1f}%")
+            print(f"   Variables: {result['prep_stats']['columns_used']}")
         else:
             failed += 1
-            print(f"\n{filename}: ✗ FAILED - {result['error']}")
+            print(f"\n{filename}:  FAILED - {result['error']}")
     
     print(f"\n{'='*60}")
     print(f"Successfully processed: {successful}/{len(csv_files)}")
@@ -405,7 +404,6 @@ if __name__ == "__main__":
     print(f"\nResults saved to: {output_dir}")
     print(f"  - *_clustered.csv: Original data + z-scores + cluster labels")
     print(f"  - *_stats.txt: Detailed analysis report")
-    print("="*60)
 
 
     ## WHAT IF I CHOOSE THE VARIABLES AND DO THE DBSCAN IN THE STRESS LEVELS

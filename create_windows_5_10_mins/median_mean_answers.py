@@ -24,7 +24,6 @@ negative_rows = df[df['response_time_seconds'] < 0].copy()
 if len(negative_rows) > 0:
     print("\n" + "=" * 70)
     print("Rows with NEGATIVE response times:")
-    print("=" * 70)
     pd.set_option('display.max_columns', None)
     pd.set_option('display.width', None)
     pd.set_option('display.max_colwidth', None)
@@ -39,7 +38,6 @@ print(f"Total responses (using absolute values): {len(df)}")
 
 print("\n" + "=" * 70)
 print("Response Times Analysis")
-print("=" * 70)
 
 print(f"\nMean response time: {df['response_time_seconds'].mean():.2f} seconds ({df['response_time_minutes'].mean():.2f} minutes)")
 print(f"Median response time: {df['response_time_seconds'].median():.2f} seconds ({df['response_time_minutes'].median():.2f} minutes)")
@@ -54,5 +52,4 @@ print(f"75th percentile: {df['response_time_seconds'].quantile(0.75):.2f} second
 # Show distribution
 print("\n" + "=" * 70)
 print("Response Time Distribution:")
-print("=" * 70)
 print(df['response_time_seconds'].describe())

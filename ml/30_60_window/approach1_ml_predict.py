@@ -22,11 +22,9 @@ warnings.filterwarnings('ignore')
 plt.style.use('seaborn-v0_8-darkgrid')
 sns.set_palette("husl")
 
-print("="*80)
 print("STRESS AND ANXIETY PREDICTION WITH PROPER DATA NORMALIZATION")
 print("SEPARATE ANALYSIS FOR 30MIN AND 60MIN WINDOWS")
 print("TIME-SERIES SPLIT: 70% TRAIN - 15% VALIDATION - 15% TEST")
-print("="*80)
 
 # Paths
 ml_dir = "/Users/YusMolina/Downloads/smieae/data/ml_ready"
@@ -52,7 +50,6 @@ for file_idx, file in enumerate(files):
     
     print("\n" + "="*80)
     print(f"PROCESSING: {window_type} WINDOW")
-    print("="*80)
     
     # Create window-specific output directory
     window_output_dir = os.path.join(output_dir, f"{window_type}_window")
@@ -68,11 +65,11 @@ for file_idx, file in enumerate(files):
     print(f"Loading: {data_file}")
     
     if not os.path.exists(data_file):
-        print(f"✗ File not found: {data_file}")
+        print(f" File not found: {data_file}")
         continue
     
     df = pd.read_csv(data_file)
-    print(f"✓ Loaded {len(df)} observations")
+    print(f" Loaded {len(df)} observations")
     
     # Define feature columns for this window
     feature_columns = [
@@ -95,7 +92,7 @@ for file_idx, file in enumerate(files):
     feature_columns.extend(hr_features)
     
     available_features = [col for col in feature_columns if col in df.columns]
-    print(f"\n✓ Using {len(available_features)} features")
+    print(f"\n Using {len(available_features)} features")
     
     # Identify target variables - both stress and anxiety
     target_columns = [col for col in df.columns if col.startswith('q_i_stress') or col.startswith('q_i_anxiety')]
@@ -118,16 +115,16 @@ for file_idx, file in enumerate(files):
     targets_to_process = []
     if stress_target:
         targets_to_process.append(('Stress', stress_target))
-        print(f"✓ Stress target: {stress_target}")
+        print(f" Stress target: {stress_target}")
     if anxiety_target:
         targets_to_process.append(('Anxiety', anxiety_target))
-        print(f"✓ Anxiety target: {anxiety_target}")
+        print(f" Anxiety target: {anxiety_target}")
     
     if not targets_to_process:
-        print("✗ No stress or anxiety targets found in dataset!")
+        print(" No stress or anxiety targets found in dataset!")
         continue
     
-    print(f"\n✓ Will train models for {len(targets_to_process)} target(s): {', '.join([t[0] for t in targets_to_process])}")
+    print(f"\n Will train models for {len(targets_to_process)} target(s): {', '.join([t[0] for t in targets_to_process])}")
     
     # Store results for this window
     all_results[window_type] = {}
@@ -151,16 +148,16 @@ for file_idx, file in enumerate(files):
         # Sort by timestamp if available (important for time series split)
         if 'timestamp' in df.columns:
             df_sorted = df.sort_values('timestamp').reset_index(drop=True)
-            print("✓ Data sorted by timestamp (chronological order)")
+            print(" Data sorted by timestamp (chronological order)")
         elif 'date' in df.columns:
             df_sorted = df.sort_values('date').reset_index(drop=True)
-            print("✓ Data sorted by date (chronological order)")
+            print(" Data sorted by date (chronological order)")
         elif 'datetime' in df.columns:
             df_sorted = df.sort_values('datetime').reset_index(drop=True)
-            print("✓ Data sorted by datetime (chronological order)")
+            print(" Data sorted by datetime (chronological order)")
         else:
             df_sorted = df.copy()
-            print("⚠ Warning: No timestamp column found. Assuming data is already in chronological order.")
+            print(" Warning: No timestamp column found. Assuming data is already in chronological order.")
         
         df_clean = df_sorted[available_features + [primary_target]].dropna(subset=[primary_target])
         
@@ -172,7 +169,7 @@ for file_idx, file in enumerate(files):
                 df_clean[col].fillna(median_val, inplace=True)
                 print(f"  Imputed {col}: {missing_count} missing values with median {median_val:.2f}")
         
-        print(f"\n✓ Clean dataset: {len(df_clean)} observations")
+        print(f"\n Clean dataset: {len(df_clean)} observations")
         
         # 3. EXPLORATORY DATA ANALYSIS
         print(f"\n3. EXPLORATORY DATA ANALYSIS ({target_name} - {window_type})")
@@ -252,11 +249,10 @@ for file_idx, file in enumerate(files):
         X_val = pd.DataFrame(X_val_standard, columns=available_features, index=X_val_raw.index)
         X_test = pd.DataFrame(X_test_standard, columns=available_features, index=X_test_raw.index)
         
-        print("✓ Normalization complete")
+        print(" Normalization complete")
         
         # 7. TRAIN MODELS
         print(f"\n7. TRAINING MODELS ({target_name} - {window_type})")
-        print("="*80)
         print("Note: Using chronological train-val-test split (not cross-validation)")
         print("to preserve temporal order in time series data")
         
@@ -327,7 +323,6 @@ for file_idx, file in enumerate(files):
         
         # 8. GENERATE ROC CURVES
         print(f"\n8. GENERATING ROC CURVES ({target_name} - {window_type})")
-        print("="*80)
         
         # Binarize the test labels for ROC curve
         y_test_bin = label_binarize(y_test, classes=[0, 1, 2])
@@ -375,7 +370,7 @@ for file_idx, file in enumerate(files):
                        dpi=300, bbox_inches='tight')
             plt.close()
             
-            print(f"✓ Saved ROC curve for {model_name}")
+            print(f" Saved ROC curve for {model_name}")
         
         # Create comparison ROC curve (all models on one plot)
         print(f"\nGenerating comparison ROC curve with all models...")
@@ -413,11 +408,10 @@ for file_idx, file in enumerate(files):
                    dpi=300, bbox_inches='tight')
         plt.close()
         
-        print(f"✓ Saved comparison ROC curve (all models)")
+        print(f" Saved comparison ROC curve (all models)")
         
         # 9. COMPARE RESULTS
         print(f"\n9. MODEL COMPARISON ({target_name} - {window_type})")
-        print("="*80)
         
         comparison_df = pd.DataFrame({
             'Model': list(results.keys()),
@@ -437,7 +431,7 @@ for file_idx, file in enumerate(files):
         comparison_df.to_csv(os.path.join(target_output_dir, "model_comparison_normalized.csv"), index=False)
         
         best_model_name = comparison_df.iloc[0]['Model']
-        print(f"\n🏆 Best Model for {target_name}: {best_model_name}")
+        print(f"\n Best Model for {target_name}: {best_model_name}")
         print(f"   Validation F1: {comparison_df.iloc[0]['Val F1']:.4f}")
         print(f"   Test F1:       {comparison_df.iloc[0]['Test F1']:.4f}")
         
@@ -466,42 +460,40 @@ for file_idx, file in enumerate(files):
         normalized_test['target'] = y_test.values
         normalized_test.to_csv(os.path.join(target_output_dir, 'test_normalized.csv'), index=False)
         
-        print("✓ Saved: train_normalized.csv")
-        print("✓ Saved: validation_normalized.csv")
-        print("✓ Saved: test_normalized.csv")
+        print(" Saved: train_normalized.csv")
+        print(" Saved: validation_normalized.csv")
+        print(" Saved: test_normalized.csv")
         
         # Save scaler
         import joblib
         joblib.dump(scaler_standard, os.path.join(target_output_dir, 'scaler_standard.pkl'))
-        print("✓ Saved: scaler_standard.pkl")
+        print(" Saved: scaler_standard.pkl")
         
         # 11. SUMMARY
         print(f"\n11. SUMMARY ({target_name} - {window_type})")
-        print("="*80)
         
-        print(f"\n✅ DATA PROPERLY NORMALIZED using StandardScaler")
+        print(f"\n DATA PROPERLY NORMALIZED using StandardScaler")
         print(f"   • Time series split: chronological order preserved")
         print(f"   • Train: {len(X_train)} (70%), Val: {len(X_val)} (15%), Test: {len(X_test)} (15%)")
         
-        print(f"\n🎯 Best Model: {best_model_name}")
+        print(f"\n Best Model: {best_model_name}")
         print(f"   • Validation F1: {results[best_model_name]['val_f1']:.4f}")
         print(f"   • Test F1:       {results[best_model_name]['test_f1']:.4f}")
         print(f"   • Test Accuracy: {results[best_model_name]['test_accuracy']:.4f}")
         
-        print(f"\n📊 ROC Curves Generated:")
+        print(f"\n ROC Curves Generated:")
         print(f"   • Individual curves for each model (5 plots)")
         print(f"   • Comparison curve with all models (1 plot)")
         
-        print(f"\n📁 Results saved to: {target_output_dir}")
+        print(f"\n Results saved to: {target_output_dir}")
         
         print("\n" + "#"*80)
-        print(f"# ✅ COMPLETE for {target_name} ({window_type})!")
+        print(f"#  COMPLETE for {target_name} ({window_type})!")
         print("#"*80)
 
 # OVERALL COMPARISON
 print("\n\n" + "="*80)
 print("OVERALL COMPARISON: STRESS vs ANXIETY (30MIN vs 60MIN WINDOWS)")
-print("="*80)
 
 if all_results:
     print("\n" + "-"*80)
@@ -539,13 +531,11 @@ if all_results:
         overall_df = pd.concat(overall_comparison, ignore_index=True)
         overall_df = overall_df[['Window', 'Target', 'Model', 'Val Acc', 'Val F1', 'Test Acc', 'Test F1', 'Test AUC', 'F1 Low', 'F1 Med', 'F1 High']]
         overall_df.to_csv(os.path.join(output_dir, 'overall_comparison_all_targets_models.csv'), index=False)
-        print("✓ Saved: overall_comparison_all_targets_models.csv")
+        print(" Saved: overall_comparison_all_targets_models.csv")
 
 print("\n" + "="*80)
-print("✅ COMPLETE! All windows and targets processed.")
 print("   Time Series Split: 70% Train - 15% Val - 15% Test (chronological)")
 print("   ROC Curves: Generated for all models and targets")
-print("="*80)
 print(f"\nResults saved to: {output_dir}")
 print("  - 30min_window/")
 print("    - stress/")
@@ -563,4 +553,3 @@ print("    - anxiety/")
 print("      - plots/ (same structure)")
 print("  - overall_comparison_all_targets_models.csv")
 print("\nNote: Data split preserves temporal order for time series analysis")
-print("="*80)

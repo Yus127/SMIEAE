@@ -315,7 +315,7 @@ def main():
             
             if stats:
                 temp_files.append(temp_file)
-                print(f"    ✓ Processed: {stats['rows']} rows, {stats['cols']} columns")
+                print(f"     Processed: {stats['rows']} rows, {stats['cols']} columns")
             
             gc.collect()
         
@@ -338,7 +338,7 @@ def main():
             
             combined.to_csv(output_file, index=False)
             
-            print(f"\n  ✓ Final file saved: {output_file}")
+            print(f"\n   Final file saved: {output_file}")
             print(f"    Total Rows: {len(combined)}, Columns: {len(combined.columns)}")
             print(f"    Date Range: {combined['timestamp'].min()} to {combined['timestamp'].max()}")
             
@@ -346,7 +346,7 @@ def main():
             gc.collect()
     
     print(f"\n{'='*60}")
-    print(f"✓ Processing complete! Output files in: {output_dir}")
+    print(f" Processing complete! Output files in: {output_dir}")
     print(f"{'='*60}")
 
 if __name__ == "__main__":

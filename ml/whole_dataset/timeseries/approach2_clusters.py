@@ -14,28 +14,22 @@ import warnings
 warnings.filterwarnings('ignore')
 import os
 
-# HARDCODED PATHS
 INPUT_PATH = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/data_with_exam_features.csv'
 OUTPUT_PATH = '/Users/YusMolina/Downloads/smieae/results/whole_dataset/timeseries/model2/model_results_binary_clustering_timeseries.csv'
 ROC_OUTPUT_PATH = '/Users/YusMolina/Downloads/smieae/results/whole_dataset/timeseries/model2/'
 os.makedirs('/Users/YusMolina/Downloads/smieae/results/whole_dataset/timeseries/model2', exist_ok=True)
-print("="*80)
 print("BINARY CLASSIFICATION WITH CLUSTERING AND ADVANCED FEATURES")
 print("Train: 70% | Validation: 15% | Test: 15% (TIME SERIES SPLIT)")
-print("="*80)
 
 # Load data
 print("\nLoading data...")
 df = pd.read_csv(INPUT_PATH)
 print(f"Dataset loaded: {len(df)} rows, {len(df.columns)} columns")
 
-# ============================================================================
-# STEP 1: CREATE USER CLUSTERS (K=2) BASED ON PHYSIOLOGICAL PROFILES
-# ============================================================================
+# CREATE USER CLUSTERS (K=2) BASED ON PHYSIOLOGICAL PROFILES
 
 print("\n" + "="*80)
 print("STEP 1: CREATING USER CLUSTERS (K=2)")
-print("="*80)
 
 # Features for clustering (physiological only, no stress/anxiety to avoid leakage)
 clustering_features = [
@@ -74,13 +68,10 @@ print(user_profiles['user_cluster'].value_counts().sort_index())
 # Map clusters back to main dataframe
 df = df.merge(user_profiles[['userid', 'user_cluster']], on='userid', how='left')
 
-# ============================================================================
-# STEP 2: ADVANCED FEATURE ENGINEERING (NON-LEAKAGE FEATURES ONLY)
-# ============================================================================
+# ADVANCED FEATURE ENGINEERING (NON-LEAKAGE FEATURES ONLY)
 
 print("\n" + "="*80)
 print("STEP 2: ADVANCED FEATURE ENGINEERING")
-print("="*80)
 
 # NOTE: Personal baselines will be calculated AFTER time series split to avoid leakage
 # Here we only create features that don't require future information
@@ -145,9 +136,7 @@ base_features = [
 
 print(f"Using {len(base_features)} base features (before baseline calculations)")
 
-# ============================================================================
-# STEP 3: CREATE BINARY TARGETS (LOW vs HIGH, exclude MEDIUM)
-# ============================================================================
+# CREATE BINARY TARGETS (LOW vs HIGH, exclude MEDIUM)
 
 def prepare_binary_data_timeseries(df, target_col, feature_cols):
     """
@@ -217,9 +206,7 @@ def prepare_binary_data_timeseries(df, target_col, feature_cols):
     print(f"  Val - Low: {(y_val==0).sum()}, High: {(y_val==1).sum()}")
     print(f"  Test - Low: {(y_test==0).sum()}, High: {(y_test==1).sum()}")
     
-    # ============================================================================
     # CALCULATE BASELINES ONLY ON TRAINING DATA (FIX FOR LEAKAGE)
-    # ============================================================================
     
     print(f"\n{'='*40}")
     print(f"CALCULATING BASELINES (TRAIN ONLY)")
@@ -300,9 +287,7 @@ def prepare_binary_data_timeseries(df, target_col, feature_cols):
     return (X_train_scaled, X_val_scaled, X_test_scaled, 
             y_train, y_val, y_test, p33, p67)
 
-# ============================================================================
-# STEP 4: TRAIN INDIVIDUAL MODELS AND ENSEMBLE
-# ============================================================================
+# TRAIN INDIVIDUAL MODELS AND ENSEMBLE
 
 def train_evaluate_binary_models(X_train, X_val, X_test, y_train, y_val, y_test, target_name):
     """Train and evaluate binary classification models + ensemble"""
@@ -435,15 +420,13 @@ def train_evaluate_binary_models(X_train, X_val, X_test, y_train, y_val, y_test,
         # Check for overfitting
         overfit_score = train_acc - test_acc
         if overfit_score > 0.1:
-            print(f"\n⚠️  Warning: Possible overfitting (train-test gap: {overfit_score:.4f})")
+            print(f"\n  Warning: Possible overfitting (train-test gap: {overfit_score:.4f})")
         elif overfit_score > 0.05:
-            print(f"\n⚠️  Moderate overfitting detected (train-test gap: {overfit_score:.4f})")
+            print(f"\n  Moderate overfitting detected (train-test gap: {overfit_score:.4f})")
         else:
-            print(f"\n✓ Good generalization (train-test gap: {overfit_score:.4f})")
+            print(f"\n Good generalization (train-test gap: {overfit_score:.4f})")
     
-    # ============================================================================
     # ENSEMBLE: Soft Voting (XGBoost + Random Forest + Logistic Regression)
-    # ============================================================================
     
     print(f"\n{'='*80}")
     print(f"ENSEMBLE MODEL: Soft Voting (XGBoost + RF + LR)")
@@ -554,17 +537,15 @@ def train_evaluate_binary_models(X_train, X_val, X_test, y_train, y_val, y_test,
     
     overfit_score_ens = train_acc_ens - test_acc_ens
     if overfit_score_ens > 0.1:
-        print(f"\n⚠️  Warning: Possible overfitting (train-test gap: {overfit_score_ens:.4f})")
+        print(f"\n  Warning: Possible overfitting (train-test gap: {overfit_score_ens:.4f})")
     elif overfit_score_ens > 0.05:
-        print(f"\n⚠️  Moderate overfitting detected (train-test gap: {overfit_score_ens:.4f})")
+        print(f"\n  Moderate overfitting detected (train-test gap: {overfit_score_ens:.4f})")
     else:
-        print(f"\n✓ Good generalization (train-test gap: {overfit_score_ens:.4f})")
+        print(f"\n Good generalization (train-test gap: {overfit_score_ens:.4f})")
     
     return results, roc_data
 
-# ============================================================================
 # FUNCTION TO PLOT ROC CURVES
-# ============================================================================
 
 def plot_roc_curves(roc_data, target_name, save_path):
     """Plot ROC curves for all models"""
@@ -613,13 +594,11 @@ def plot_roc_curves(roc_data, target_name, save_path):
     filename = f"roc_curve_{target_name.lower().replace(' ', '_')}.png"
     full_path = os.path.join(save_path, filename)
     plt.savefig(full_path, dpi=300, bbox_inches='tight')
-    print(f"\n✓ ROC curve saved to: {full_path}")
+    print(f"\n ROC curve saved to: {full_path}")
     
     plt.close()
 
-# ============================================================================
 # EXECUTE PIPELINE FOR STRESS AND ANXIETY
-# ============================================================================
 
 # Prepare binary data for stress with time series split (NO LEAKAGE)
 X_train_stress, X_val_stress, X_test_stress, y_train_stress, y_val_stress, y_test_stress, p33_stress, p67_stress = prepare_binary_data_timeseries(
@@ -651,13 +630,10 @@ anxiety_results, anxiety_roc_data = train_evaluate_binary_models(
 # Plot ROC curves for anxiety
 plot_roc_curves(anxiety_roc_data, "Anxiety Level", ROC_OUTPUT_PATH)
 
-# ============================================================================
 # FINAL SUMMARY
-# ============================================================================
 
 print("\n" + "="*80)
 print("FINAL SUMMARY - BINARY CLASSIFICATION WITH CLUSTERING (TIME SERIES - NO LEAKAGE)")
-print("="*80)
 
 print("\n" + "-"*80)
 print("STRESS LEVEL PREDICTION (Binary: Low vs High)")
@@ -687,7 +663,6 @@ best_anxiety_model = max(anxiety_results.items(), key=lambda x: x[1]['val_accura
 
 print("\n" + "="*80)
 print("BEST MODELS (based on validation accuracy)")
-print("="*80)
 print(f"\nStress Level: {best_stress_model[0]}")
 print(f"  Train Accuracy:      {best_stress_model[1]['train_accuracy']:.4f}")
 print(f"  Validation Accuracy: {best_stress_model[1]['val_accuracy']:.4f}")
@@ -708,7 +683,6 @@ print(f"  Test AUC:            {best_anxiety_model[1]['test_auc']:.4f}")
 
 print("\n" + "="*80)
 print("ANALYSIS COMPLETE")
-print("="*80)
 
 # Save results
 results_df = pd.DataFrame({

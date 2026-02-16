@@ -9,9 +9,7 @@ output_dir = "/Users/YusMolina/Downloads/smieae/data/ml_ready"
 # Create output directory if it doesn't exist
 os.makedirs(output_dir, exist_ok=True)
 
-print("="*70)
 print("ML-READY DATASET GENERATOR (SEPARATE WINDOWS)")
-print("="*70)
 
 # Load the aggregated files
 print("\nStep 1: Loading aggregated data files...")
@@ -30,16 +28,13 @@ if not os.path.exists(agg_10min_path):
 df_5min = pd.read_csv(agg_5min_path)
 df_10min = pd.read_csv(agg_10min_path)
 
-print(f"✓ Loaded 5-minute window data: {len(df_5min)} rows")
-print(f"✓ Loaded 10-minute window data: {len(df_10min)} rows")
+print(f" Loaded 5-minute window data: {len(df_5min)} rows")
+print(f" Loaded 10-minute window data: {len(df_10min)} rows")
 
-# ==============================================================================
 # PART 1: CREATE ML-READY DATASETS (SEPARATE)
-# ==============================================================================
 
 print("\n" + "="*70)
 print("PART 1: CREATING ML-READY DATASETS")
-print("="*70)
 
 def create_ml_dataset(df, window_name, min_completeness=10.0):
     """
@@ -115,34 +110,31 @@ if removed_5min:
     removed_5min_df = removed_5min_df.sort_values('completeness_pct', ascending=True)
     output_removed_5min = os.path.join(output_dir_removed_var, "removed_features_5min.csv")
     removed_5min_df.to_csv(output_removed_5min, index=False)
-    print(f"\n✓ Saved list of removed features (5-min): {output_removed_5min}")
+    print(f"\n Saved list of removed features (5-min): {output_removed_5min}")
 
 if removed_10min:
     removed_10min_df = pd.DataFrame(removed_10min, columns=['feature_name', 'completeness_pct'])
     removed_10min_df = removed_10min_df.sort_values('completeness_pct', ascending=True)
     output_removed_10min = os.path.join(output_dir_removed_var, "removed_features_10min.csv")
     removed_10min_df.to_csv(output_removed_10min, index=False)
-    print(f"\n✓ Saved list of removed features (10-min): {output_removed_10min}")
+    print(f"\n Saved list of removed features (10-min): {output_removed_10min}")
 
-print(f"\n✓ Saved 5-minute ML dataset: {output_5min}")
+print(f"\n Saved 5-minute ML dataset: {output_5min}")
 print(f"  Shape: {ml_5min.shape} (rows x columns)")
 print(f"  Features: {len(features_5min)}")
 print(f"  Targets: {len(targets_5min)}")
 print(f"  Unique users: {ml_5min['userid'].nunique()}")
 
-print(f"\n✓ Saved 10-minute ML dataset: {output_10min}")
+print(f"\n Saved 10-minute ML dataset: {output_10min}")
 print(f"  Shape: {ml_10min.shape} (rows x columns)")
 print(f"  Features: {len(features_10min)}")
 print(f"  Targets: {len(targets_10min)}")
 print(f"  Unique users: {ml_10min['userid'].nunique()}")
 
-# ==============================================================================
 # PART 2: DATA COMPLETENESS ANALYSIS
-# ==============================================================================
 
 print("\n" + "="*70)
 print("PART 2: DATA COMPLETENESS ANALYSIS")
-print("="*70)
 
 def create_completeness_report(df, feature_cols, window_name):
     """
@@ -191,19 +183,16 @@ output_completeness_10min = os.path.join(output_dir_removed_var, "feature_comple
 completeness_5min_df.to_csv(output_completeness_5min, index=False)
 completeness_10min_df.to_csv(output_completeness_10min, index=False)
 
-print(f"\n✓ Saved 5-minute completeness report: {output_completeness_5min}")
+print(f"\n Saved 5-minute completeness report: {output_completeness_5min}")
 print(f"  Features analyzed: {len(completeness_5min_df)}")
 
-print(f"\n✓ Saved 10-minute completeness report: {output_completeness_10min}")
+print(f"\n Saved 10-minute completeness report: {output_completeness_10min}")
 print(f"  Features analyzed: {len(completeness_10min_df)}")
 
-# ==============================================================================
 # PART 3: VARIABLE COMPLETENESS SUMMARIES
-# ==============================================================================
 
 print("\n" + "="*70)
 print("PART 3: VARIABLE COMPLETENESS SUMMARIES")
-print("="*70)
 
 def create_variable_summary(completeness_df, window_name):
     """
@@ -252,19 +241,16 @@ output_var_summary_10min = os.path.join(output_dir_removed_var, "variable_summar
 var_summary_5min.to_csv(output_var_summary_5min, index=False)
 var_summary_10min.to_csv(output_var_summary_10min, index=False)
 
-print(f"\n✓ Saved 5-minute variable summary: {output_var_summary_5min}")
+print(f"\n Saved 5-minute variable summary: {output_var_summary_5min}")
 print(f"  Unique variables: {len(var_summary_5min)}")
 
-print(f"\n✓ Saved 10-minute variable summary: {output_var_summary_10min}")
+print(f"\n Saved 10-minute variable summary: {output_var_summary_10min}")
 print(f"  Unique variables: {len(var_summary_10min)}")
 
-# ==============================================================================
 # PART 4: DISPLAY TOP/BOTTOM VARIABLES
-# ==============================================================================
 
 print("\n" + "="*70)
 print("TOP 20 MOST COMPLETE VARIABLES (5-MINUTE WINDOW)")
-print("="*70)
 
 top_20_5min = var_summary_5min.head(20)
 print("\n{:<50} {:<15} {:<10}".format("Variable", "Avg Complete (%)", "Stats Count"))
@@ -282,7 +268,6 @@ for _, row in top_20_5min.iterrows():
 
 print("\n" + "="*70)
 print("TOP 20 MOST COMPLETE VARIABLES (10-MINUTE WINDOW)")
-print("="*70)
 
 top_20_10min = var_summary_10min.head(20)
 print("\n{:<50} {:<15} {:<10}".format("Variable", "Avg Complete (%)", "Stats Count"))
@@ -298,13 +283,10 @@ for _, row in top_20_10min.iterrows():
         row['statistics_count']
     ))
 
-# ==============================================================================
 # PART 5: SUMMARY STATISTICS
-# ==============================================================================
 
 print("\n" + "="*70)
 print("DATASET SUMMARY STATISTICS")
-print("="*70)
 
 summary_stats_5min = {
     'metric': [
@@ -362,21 +344,17 @@ output_summary_10min = os.path.join(output_dir_removed_var, "dataset_summary_10m
 summary_5min_df.to_csv(output_summary_5min, index=False)
 summary_10min_df.to_csv(output_summary_10min, index=False)
 
-print(f"\n✓ Saved 5-minute summary: {output_summary_5min}")
+print(f"\n Saved 5-minute summary: {output_summary_5min}")
 print(f"\n5-MINUTE WINDOW SUMMARY:")
 print(summary_5min_df.to_string(index=False))
 
-print(f"\n✓ Saved 10-minute summary: {output_summary_10min}")
+print(f"\n Saved 10-minute summary: {output_summary_10min}")
 print(f"\n10-MINUTE WINDOW SUMMARY:")
 print(summary_10min_df.to_string(index=False))
 
-# ==============================================================================
 # FINAL SUMMARY
-# ==============================================================================
 
 print("\n" + "="*70)
-print("✓ ALL PROCESSING COMPLETE!")
-print("="*70)
 
 print("\nGenerated files for 5-MINUTE WINDOW:")
 print(f"  1. {output_5min}")

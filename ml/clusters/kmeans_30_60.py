@@ -13,11 +13,9 @@ warnings.filterwarnings('ignore')
 plt.style.use('seaborn-v0_8-darkgrid')
 sns.set_palette("husl")
 
-print("="*80)
 print("USER CLUSTERING ANALYSIS - 3 CLUSTERS")
 print("PHYSIOLOGICAL & CONTEXTUAL FEATURES (NO TARGET LEAKAGE)")
 print("SEPARATE ANALYSIS FOR 30MIN AND 60MIN WINDOWS")
-print("="*80)
 
 # Paths
 INPUT_PATH = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/data_with_exam_features.csv'
@@ -38,12 +36,12 @@ print(f"{'='*80}")
 print(f"Path: {INPUT_PATH}")
 
 if not os.path.exists(INPUT_PATH):
-    print(f"✗ File not found: {INPUT_PATH}")
+    print(f" File not found: {INPUT_PATH}")
     exit(1)
 
 df_main = pd.read_csv(INPUT_PATH)
-print(f"✓ Loaded {len(df_main)} observations")
-print(f"✓ Columns: {df_main.shape[1]}")
+print(f" Loaded {len(df_main)} observations")
+print(f" Columns: {df_main.shape[1]}")
 
 # Process each window type
 for window_type in window_types:
@@ -51,22 +49,19 @@ for window_type in window_types:
     
     print("\n" + "="*80)
     print(f"PROCESSING: {window_type.upper()} WINDOW")
-    print("="*80)
     
     # Create window-specific output directory
     window_output_dir = os.path.join(output_dir, f"{window_type}_window")
     os.makedirs(window_output_dir, exist_ok=True)
     os.makedirs(os.path.join(window_output_dir, "plots"), exist_ok=True)
     
-    # ========================================================================
     # 1. LOAD DATA
-    # ========================================================================
     print(f"\n1. USING DATA FOR {window_type} WINDOW")
     print("-"*80)
     
     # Use the already loaded main dataset
     df = df_main.copy()
-    print(f"✓ Using {len(df)} observations from main dataset")
+    print(f" Using {len(df)} observations from main dataset")
     
     # Define features
     feature_columns = [
@@ -85,7 +80,7 @@ for window_type in window_types:
     feature_columns.extend(hr_features)
     
     available_features = [col for col in feature_columns if col in df.columns]
-    print(f"✓ Using {len(available_features)} features")
+    print(f" Using {len(available_features)} features")
     
     # Ensure userid column exists
     if 'userid' not in df.columns:
@@ -107,9 +102,7 @@ for window_type in window_types:
         anxiety_cols = [col for col in df.columns if 'anxiety' in col.lower() and col.startswith('q_i')]
         anxiety_target = anxiety_cols[0] if anxiety_cols else None
     
-    # ========================================================================
     # 2. PREPARE DATA
-    # ========================================================================
     print(f"\n2. DATA PREPARATION ({window_type})")
     print("-"*80)
     
@@ -132,14 +125,12 @@ for window_type in window_types:
             df_clean[col].fillna(median_val, inplace=True)
             print(f"  Imputed {col}: median={median_val:.2f}")
     
-    print(f"\n✓ Clean dataset: {len(df_clean)} observations from {df_clean['userid'].nunique()} users")
+    print(f"\n Clean dataset: {len(df_clean)} observations from {df_clean['userid'].nunique()} users")
     
-    # ========================================================================
     # 3. CREATE USER PROFILES (NO TARGET LEAKAGE!)
-    # ========================================================================
     print(f"\n3. CREATING USER PROFILES ({window_type})")
     print("-"*80)
-    print("⚠️  IMPORTANT: Using ONLY physiological & contextual features")
+    print("  IMPORTANT: Using ONLY physiological & contextual features")
     print("             NOT using stress or anxiety labels for clustering!")
     
     # Calculate user profiles ONLY from physiological/contextual features
@@ -192,7 +183,7 @@ for window_type in window_types:
     
     user_profiles = user_profiles.rename(columns=col_mapping)
     
-    print(f"\n✓ Created user profiles with {len(user_feature_cols)} features:")
+    print(f"\n Created user profiles with {len(user_feature_cols)} features:")
     for feat in user_feature_cols:
         print(f"  • {feat}")
     
@@ -201,17 +192,15 @@ for window_type in window_types:
         user_stress = df_clean.groupby('userid')[stress_target].mean().reset_index()
         user_stress.columns = ['userid', 'avg_stress']
         user_profiles = user_profiles.merge(user_stress, on='userid', how='left')
-        print(f"\n✓ Calculated average stress per user (for visualization only)")
+        print(f"\n Calculated average stress per user (for visualization only)")
     
     if anxiety_target:
         user_anxiety = df_clean.groupby('userid')[anxiety_target].mean().reset_index()
         user_anxiety.columns = ['userid', 'avg_anxiety']
         user_profiles = user_profiles.merge(user_anxiety, on='userid', how='left')
-        print(f"✓ Calculated average anxiety per user (for visualization only)")
+        print(f" Calculated average anxiety per user (for visualization only)")
     
-    # ========================================================================
     # 4. NORMALIZE USER FEATURES
-    # ========================================================================
     print(f"\n4. NORMALIZING USER FEATURES ({window_type})")
     print("-"*80)
     
@@ -219,14 +208,12 @@ for window_type in window_types:
     scaler_user = StandardScaler()
     X_users_scaled = scaler_user.fit_transform(X_users)
     
-    print(f"✓ Normalized {X_users_scaled.shape[0]} users with {X_users_scaled.shape[1]} features")
+    print(f" Normalized {X_users_scaled.shape[0]} users with {X_users_scaled.shape[1]} features")
     print(f"\nFeature statistics after normalization:")
     print(f"  Mean: {X_users_scaled.mean():.3f} (should be ~0)")
     print(f"  Std:  {X_users_scaled.std():.3f} (should be ~1)")
     
-    # ========================================================================
     # 5. ELBOW METHOD (Optional - show why 3 clusters)
-    # ========================================================================
     print(f"\n5. ELBOW METHOD ANALYSIS ({window_type})")
     print("-"*80)
     
@@ -267,12 +254,10 @@ for window_type in window_types:
     plt.suptitle(f'Optimal Number of Clusters - {window_type} window', fontsize=14, fontweight='bold')
     plt.tight_layout()
     plt.savefig(os.path.join(window_output_dir, 'plots', 'elbow_method.png'), dpi=300, bbox_inches='tight')
-    print(f"\n✓ Saved: elbow_method.png")
+    print(f"\n Saved: elbow_method.png")
     plt.close()
     
-    # ========================================================================
     # 6. PERFORM CLUSTERING WITH K=3
-    # ========================================================================
     print(f"\n6. K-MEANS CLUSTERING (k=3) ({window_type})")
     print("-"*80)
     
@@ -285,7 +270,7 @@ for window_type in window_types:
     davies_bouldin = davies_bouldin_score(X_users_scaled, user_clusters)
     calinski_harabasz = calinski_harabasz_score(X_users_scaled, user_clusters)
     
-    print(f"\n✓ Clustering completed with 3 clusters")
+    print(f"\n Clustering completed with 3 clusters")
     print(f"\nClustering Quality Metrics:")
     print(f"  Silhouette Score:        {silhouette:.4f} (higher is better, range: -1 to 1)")
     print(f"  Davies-Bouldin Index:    {davies_bouldin:.4f} (lower is better)")
@@ -297,9 +282,7 @@ for window_type in window_types:
         pct = n / len(user_clusters) * 100
         print(f"  Cluster {cluster_id}: {n:3d} users ({pct:5.1f}%)")
     
-    # ========================================================================
     # 7. CLUSTER CHARACTERISTICS
-    # ========================================================================
     print(f"\n7. CLUSTER CHARACTERISTICS ({window_type})")
     print("-"*80)
     
@@ -347,11 +330,9 @@ for window_type in window_types:
     
     # Save cluster summary
     cluster_summary_df.to_csv(os.path.join(window_output_dir, 'cluster_summary.csv'), index=False)
-    print(f"\n✓ Saved: cluster_summary.csv")
+    print(f"\n Saved: cluster_summary.csv")
     
-    # ========================================================================
     # 8. PCA FOR VISUALIZATION
-    # ========================================================================
     print(f"\n8. PCA FOR VISUALIZATION ({window_type})")
     print("-"*80)
     
@@ -367,18 +348,14 @@ for window_type in window_types:
     user_profiles['pca_1'] = X_pca_2d[:, 0]
     user_profiles['pca_2'] = X_pca_2d[:, 1]
     
-    # ========================================================================
     # 9. VISUALIZATIONS
-    # ========================================================================
     print(f"\n9. CREATING VISUALIZATIONS ({window_type})")
     print("-"*80)
     
     # Define cluster colors
     cluster_colors = ['#FF6B6B', '#4ECDC4', '#45B7D1']
     
-    # -------------------------------------------------------------------------
     # 9.1. PCA Scatter Plot (2D)
-    # -------------------------------------------------------------------------
     fig, ax = plt.subplots(figsize=(12, 8))
     
     for cluster_id in range(3):
@@ -404,12 +381,10 @@ for window_type in window_types:
     
     plt.tight_layout()
     plt.savefig(os.path.join(window_output_dir, 'plots', 'clusters_pca_2d.png'), dpi=300, bbox_inches='tight')
-    print("✓ Saved: clusters_pca_2d.png")
+    print(" Saved: clusters_pca_2d.png")
     plt.close()
     
-    # -------------------------------------------------------------------------
     # 9.2. Feature Distribution by Cluster
-    # -------------------------------------------------------------------------
     n_features = len(user_feature_cols)
     n_cols = 3
     n_rows = (n_features + n_cols - 1) // n_cols
@@ -448,12 +423,10 @@ for window_type in window_types:
     plt.tight_layout()
     plt.savefig(os.path.join(window_output_dir, 'plots', 'feature_distributions_by_cluster.png'), 
                dpi=300, bbox_inches='tight')
-    print("✓ Saved: feature_distributions_by_cluster.png")
+    print(" Saved: feature_distributions_by_cluster.png")
     plt.close()
     
-    # -------------------------------------------------------------------------
     # 9.3. Cluster Heatmap (Normalized Feature Means)
-    # -------------------------------------------------------------------------
     # Create heatmap data
     heatmap_data = []
     for cluster_id in range(3):
@@ -480,12 +453,10 @@ for window_type in window_types:
     
     plt.tight_layout()
     plt.savefig(os.path.join(window_output_dir, 'plots', 'cluster_heatmap.png'), dpi=300, bbox_inches='tight')
-    print("✓ Saved: cluster_heatmap.png")
+    print(" Saved: cluster_heatmap.png")
     plt.close()
     
-    # -------------------------------------------------------------------------
     # 9.4. Stress/Anxiety by Cluster (if available)
-    # -------------------------------------------------------------------------
     if 'avg_stress' in user_profiles.columns or 'avg_anxiety' in user_profiles.columns:
         targets_available = []
         if 'avg_stress' in user_profiles.columns:
@@ -525,12 +496,10 @@ for window_type in window_types:
         plt.tight_layout()
         plt.savefig(os.path.join(window_output_dir, 'plots', 'stress_anxiety_by_cluster.png'), 
                    dpi=300, bbox_inches='tight')
-        print("✓ Saved: stress_anxiety_by_cluster.png")
+        print(" Saved: stress_anxiety_by_cluster.png")
         plt.close()
     
-    # -------------------------------------------------------------------------
     # 9.5. Cluster Size Pie Chart
-    # -------------------------------------------------------------------------
     fig, ax = plt.subplots(figsize=(10, 8))
     
     cluster_sizes = [np.sum(user_clusters == i) for i in range(3)]
@@ -550,12 +519,10 @@ for window_type in window_types:
     
     plt.tight_layout()
     plt.savefig(os.path.join(window_output_dir, 'plots', 'cluster_sizes_pie.png'), dpi=300, bbox_inches='tight')
-    print("✓ Saved: cluster_sizes_pie.png")
+    print(" Saved: cluster_sizes_pie.png")
     plt.close()
     
-    # -------------------------------------------------------------------------
     # 9.6. 3D PCA Plot (if we have 3+ features)
-    # -------------------------------------------------------------------------
     if len(user_feature_cols) >= 3:
         pca_3d = PCA(n_components=3)
         X_pca_3d = pca_3d.fit_transform(X_users_scaled)
@@ -591,23 +558,21 @@ for window_type in window_types:
         
         plt.tight_layout()
         plt.savefig(os.path.join(window_output_dir, 'plots', 'clusters_pca_3d.png'), dpi=300, bbox_inches='tight')
-        print("✓ Saved: clusters_pca_3d.png")
+        print(" Saved: clusters_pca_3d.png")
         plt.close()
     
-    # ========================================================================
     # 10. SAVE USER-CLUSTER MAPPING
-    # ========================================================================
     print(f"\n10. SAVING RESULTS ({window_type})")
     print("-"*80)
     
     # Save user-cluster assignments
     user_cluster_mapping = user_profiles[['userid', 'user_cluster']].copy()
     user_cluster_mapping.to_csv(os.path.join(window_output_dir, 'user_cluster_assignments.csv'), index=False)
-    print("✓ Saved: user_cluster_assignments.csv")
+    print(" Saved: user_cluster_assignments.csv")
     
     # Save full user profiles with clusters
     user_profiles.to_csv(os.path.join(window_output_dir, 'user_profiles_with_clusters.csv'), index=False)
-    print("✓ Saved: user_profiles_with_clusters.csv")
+    print(" Saved: user_profiles_with_clusters.csv")
     
     # Store results
     all_clustering_results[window_type] = {
@@ -621,15 +586,12 @@ for window_type in window_types:
     }
     
     print("\n" + "#"*80)
-    print(f"# ✅ COMPLETE: {window_type} WINDOW")
+    print(f"#  COMPLETE: {window_type} WINDOW")
     print("#"*80)
 
-# ============================================================================
 # OVERALL SUMMARY
-# ============================================================================
 print("\n\n" + "="*80)
 print("OVERALL CLUSTERING SUMMARY")
-print("="*80)
 
 if all_clustering_results:
     print("\n" + "-"*80)
@@ -648,4 +610,3 @@ if all_clustering_results:
             print(f"  Features Used:           {', '.join(res['features_used'])}")
 
 print("\n" + "="*80)
-print("✅ CLUSTERING ANALYSIS COMPLETE!")

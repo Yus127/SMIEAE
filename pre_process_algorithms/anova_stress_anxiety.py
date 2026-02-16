@@ -14,63 +14,55 @@ warnings.filterwarnings('ignore')
 try:
     import xgboost as xgb
     MODEL_TYPE = 'XGBoost'
-    print("✓ Using XGBoost")
+    print(" Using XGBoost")
 except Exception as e:
-    print(f"⚠️  XGBoost not available: {str(e)[:100]}")
+    print(f"  XGBoost not available: {str(e)[:100]}")
     try:
         import lightgbm as lgb
         MODEL_TYPE = 'LightGBM'
-        print("✓ Using LightGBM as alternative")
+        print(" Using LightGBM as alternative")
     except:
         from sklearn.ensemble import GradientBoostingRegressor
         MODEL_TYPE = 'GradientBoosting'
-        print("✓ Using scikit-learn GradientBoosting as alternative")
+        print(" Using scikit-learn GradientBoosting as alternative")
 
-print("="*80)
 print(f"{MODEL_TYPE} PREDICTION: STRESS & ANXIETY LEVELS")
-print("="*80)
 
-# ============================================================================
-# STEP 1: LOAD DATA
-# ============================================================================
+# LOAD DATA
 
-print("\n[1/8] Loading ML-ready dataset...")
+print("\nLoading ML-ready dataset...")
 df = pd.read_csv('/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/ml_ready_dataset_transformed.csv')
 
-print(f"✓ Dataset loaded: {df.shape}")
+print(f" Dataset loaded: {df.shape}")
 print(f"  Rows: {df.shape[0]}")
 print(f"  Columns: {df.shape[1]}")
 
-# ============================================================================
-# STEP 2: PREPARE FEATURES AND TARGETS
-# ============================================================================
+# PREPARE FEATURES AND TARGETS
 
-print("\n[2/8] Preparing features and targets...")
+print("\nPreparing features and targets...")
 
 # Separate features and targets
 X = df.drop(['stress_level', 'anxiety_level'], axis=1)
 y_stress = df['stress_level']
 y_anxiety = df['anxiety_level']
 
-print(f"✓ Features shape: {X.shape}")
-print(f"✓ Stress target shape: {y_stress.shape}")
-print(f"✓ Anxiety target shape: {y_anxiety.shape}")
+print(f" Features shape: {X.shape}")
+print(f" Stress target shape: {y_stress.shape}")
+print(f" Anxiety target shape: {y_anxiety.shape}")
 
 # Check for missing data
 missing_cols = X.columns[X.isna().any()].tolist()
 if missing_cols:
-    print(f"\n⚠️  Missing data found in {len(missing_cols)} columns")
+    print(f"\n  Missing data found in {len(missing_cols)} columns")
     for col in missing_cols[:5]:
         pct = (X[col].isna().sum() / len(X)) * 100
         print(f"  • {col}: {pct:.1f}% missing")
     if len(missing_cols) > 5:
         print(f"  ... and {len(missing_cols) - 5} more")
 
-# ============================================================================
-# STEP 3: HANDLE MISSING DATA
-# ============================================================================
+# HANDLE MISSING DATA
 
-print("\n[3/8] Handling missing data...")
+print("\nHandling missing data...")
 
 # Use median imputation for numerical features
 imputer = SimpleImputer(strategy='median')
@@ -80,14 +72,12 @@ X_imputed = pd.DataFrame(
     index=X.index
 )
 
-print(f"✓ Missing data imputed using median strategy")
+print(f" Missing data imputed using median strategy")
 print(f"  Remaining missing values: {X_imputed.isna().sum().sum()}")
 
-# ============================================================================
-# STEP 4: SPLIT DATA
-# ============================================================================
+# SPLIT DATA
 
-print("\n[4/8] Splitting data into train/test sets...")
+print("\nSplitting data into train/test sets...")
 
 # Split for stress prediction
 X_train_stress, X_test_stress, y_train_stress, y_test_stress = train_test_split(
@@ -99,19 +89,17 @@ X_train_anxiety, X_test_anxiety, y_train_anxiety, y_test_anxiety = train_test_sp
     X_imputed, y_anxiety, test_size=0.2, random_state=42, stratify=None
 )
 
-print("✓ Stress prediction sets:")
+print(" Stress prediction sets:")
 print(f"  Training: {X_train_stress.shape[0]} samples")
 print(f"  Testing: {X_test_stress.shape[0]} samples")
 
-print("✓ Anxiety prediction sets:")
+print(" Anxiety prediction sets:")
 print(f"  Training: {X_train_anxiety.shape[0]} samples")
 print(f"  Testing: {X_test_anxiety.shape[0]} samples")
 
-# ============================================================================
-# STEP 5: TRAIN XGBOOST MODELS
-# ============================================================================
+# TRAIN XGBOOST MODELS
 
-print("\n[5/8] Training models...")
+print("\nTraining models...")
 
 # Create models based on what's available
 if MODEL_TYPE == 'XGBoost':
@@ -160,18 +148,16 @@ else:  # GradientBoosting
 # Train stress model
 print("\n  Training STRESS model...")
 model_stress.fit(X_train_stress, y_train_stress)
-print("  ✓ Stress model trained")
+print("   Stress model trained")
 
 # Train anxiety model
 print("  Training ANXIETY model...")
 model_anxiety.fit(X_train_anxiety, y_train_anxiety)
-print("  ✓ Anxiety model trained")
+print("   Anxiety model trained")
 
-# ============================================================================
-# STEP 6: MAKE PREDICTIONS
-# ============================================================================
+# MAKE PREDICTIONS
 
-print("\n[6/8] Making predictions...")
+print("\nMaking predictions...")
 
 # Stress predictions
 y_pred_stress_train = model_stress.predict(X_train_stress)
@@ -181,13 +167,11 @@ y_pred_stress_test = model_stress.predict(X_test_stress)
 y_pred_anxiety_train = model_anxiety.predict(X_train_anxiety)
 y_pred_anxiety_test = model_anxiety.predict(X_test_anxiety)
 
-print("✓ Predictions completed")
+print(" Predictions completed")
 
-# ============================================================================
-# STEP 7: EVALUATE MODELS
-# ============================================================================
+# EVALUATE MODELS
 
-print("\n[7/8] Evaluating model performance...")
+print("\nEvaluating model performance...")
 
 def evaluate_regression(y_true, y_pred, dataset_name):
     """Calculate regression metrics"""
@@ -215,38 +199,33 @@ anxiety_test_metrics = evaluate_regression(y_test_anxiety, y_pred_anxiety_test, 
 # Display results
 print("\n" + "="*80)
 print("STRESS PREDICTION RESULTS")
-print("="*80)
 stress_results = pd.DataFrame([stress_train_metrics, stress_test_metrics])
 print(stress_results.to_string(index=False))
 
 print("\n" + "="*80)
 print("ANXIETY PREDICTION RESULTS")
-print("="*80)
 anxiety_results = pd.DataFrame([anxiety_train_metrics, anxiety_test_metrics])
 print(anxiety_results.to_string(index=False))
 
 # Check for overfitting
 print("\n" + "="*80)
 print("OVERFITTING CHECK")
-print("="*80)
 stress_overfit = stress_train_metrics['R²'] - stress_test_metrics['R²']
 anxiety_overfit = anxiety_train_metrics['R²'] - anxiety_test_metrics['R²']
 
 print(f"Stress model:")
 print(f"  Train R²: {stress_train_metrics['R²']:.4f}")
 print(f"  Test R²: {stress_test_metrics['R²']:.4f}")
-print(f"  Difference: {stress_overfit:.4f} {'⚠️  (overfitting)' if stress_overfit > 0.1 else '✓ (good)'}")
+print(f"  Difference: {stress_overfit:.4f} {'  (overfitting)' if stress_overfit > 0.1 else ' (good)'}")
 
 print(f"\nAnxiety model:")
 print(f"  Train R²: {anxiety_train_metrics['R²']:.4f}")
 print(f"  Test R²: {anxiety_test_metrics['R²']:.4f}")
-print(f"  Difference: {anxiety_overfit:.4f} {'⚠️  (overfitting)' if anxiety_overfit > 0.1 else '✓ (good)'}")
+print(f"  Difference: {anxiety_overfit:.4f} {'  (overfitting)' if anxiety_overfit > 0.1 else ' (good)'}")
 
-# ============================================================================
-# STEP 8: FEATURE IMPORTANCE
-# ============================================================================
+# FEATURE IMPORTANCE
 
-print("\n[8/8] Analyzing feature importance...")
+print("\nAnalyzing feature importance...")
 
 # Get feature importance based on model type
 if MODEL_TYPE == 'GradientBoosting':
@@ -270,21 +249,16 @@ anxiety_importance = pd.DataFrame({
 
 print("\n" + "="*80)
 print("TOP 10 MOST IMPORTANT FEATURES FOR STRESS PREDICTION")
-print("="*80)
 print(stress_importance.head(10).to_string(index=False))
 
 print("\n" + "="*80)
 print("TOP 10 MOST IMPORTANT FEATURES FOR ANXIETY PREDICTION")
-print("="*80)
 print(anxiety_importance.head(10).to_string(index=False))
 
-# ============================================================================
-# STEP 9: VISUALIZATIONS
-# ============================================================================
+# VISUALIZATIONS
 
 print("\n" + "="*80)
 print("GENERATING VISUALIZATIONS")
-print("="*80)
 
 # Create figure with subplots
 fig, axes = plt.subplots(2, 3, figsize=(18, 12))
@@ -356,15 +330,12 @@ output_plot = f'/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/ano
 plt.savefig(output_plot, dpi=300, bbox_inches='tight')
 plt.show()
 
-print(f"✓ Saved visualization: {output_plot}")
+print(f" Saved visualization: {output_plot}")
 
-# ============================================================================
-# STEP 10: SAVE RESULTS
-# ============================================================================
+# SAVE RESULTS
 
 print("\n" + "="*80)
 print("SAVING RESULTS")
-print("="*80)
 
 base_path = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/anova/'
 
@@ -382,13 +353,13 @@ metrics_df = pd.DataFrame({
            anxiety_train_metrics['R²'], anxiety_test_metrics['R²']]
 })
 metrics_df.to_csv(f'{base_path}xgboost_metrics.csv', index=False)
-print(f"✓ Saved: xgboost_metrics.csv")
+print(f" Saved: xgboost_metrics.csv")
 
 # Save feature importance
 stress_importance.to_csv(f'{base_path}xgboost_feature_importance_stress.csv', index=False)
 anxiety_importance.to_csv(f'{base_path}xgboost_feature_importance_anxiety.csv', index=False)
-print(f"✓ Saved: xgboost_feature_importance_stress.csv")
-print(f"✓ Saved: xgboost_feature_importance_anxiety.csv")
+print(f" Saved: xgboost_feature_importance_stress.csv")
+print(f" Saved: xgboost_feature_importance_anxiety.csv")
 
 # Save predictions
 predictions_stress = pd.DataFrame({
@@ -402,18 +373,14 @@ predictions_anxiety = pd.DataFrame({
     'Predicted_Anxiety': y_pred_anxiety_test
 })
 predictions_anxiety.to_csv(f'{base_path}xgboost_predictions_anxiety.csv', index=False)
-print(f"✓ Saved: xgboost_predictions_stress.csv")
-print(f"✓ Saved: xgboost_predictions_anxiety.csv")
+print(f" Saved: xgboost_predictions_stress.csv")
+print(f" Saved: xgboost_predictions_anxiety.csv")
 
-# ============================================================================
-# STEP 11: SUMMARY
-# ============================================================================
+# SUMMARY
 
 print("\n" + "="*80)
-print(f"{MODEL_TYPE} MODELING COMPLETE!")
-print("="*80)
 
-print("\n📊 KEY FINDINGS:")
+print("\n KEY FINDINGS:")
 print(f"\nStress Prediction:")
 print(f"  • Test R² = {stress_test_metrics['R²']:.3f} ({stress_test_metrics['R²']*100:.1f}% variance explained)")
 print(f"  • Test RMSE = {stress_test_metrics['RMSE']:.2f}")
@@ -426,7 +393,7 @@ print(f"  • Test RMSE = {anxiety_test_metrics['RMSE']:.2f}")
 print(f"  • Test MAE = {anxiety_test_metrics['MAE']:.2f}")
 print(f"  • Top predictor: {anxiety_importance.iloc[0]['Feature']}")
 
-print("\n💡 NEXT STEPS:")
+print("\n NEXT STEPS:")
 print("  1. Fine-tune hyperparameters with GridSearchCV")
 print("  2. Try ensemble methods (combine multiple models)")
 print("  3. Perform cross-validation for more robust estimates")

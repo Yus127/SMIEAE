@@ -65,7 +65,6 @@ def analyze_csv(name, path):
     # ── General overview ──
     print(f"\n  Shape:        {df.shape[0]:,} rows x {df.shape[1]} columns")
     print(f"  File size:    {file_size_mb:.1f} MB")
-    #print(f"  Memory usage: {df.memory_usage(deep=True).sum() / 1e6:.1f} MB")
 
     # ── Completeness per column ──
     completeness = df.notna().mean() * 100

@@ -38,9 +38,7 @@ SENTINEL_COLS = [
     'respiratory_rate_summary_rem_sleep_breathing_rate_mean',
 ]
 
-print("=" * 60)
 print("ADDING LOG TRANSFORMS TO SKEWED COLUMNS")
-print("=" * 60)
 
 print(f"\nReading data from: {INPUT_PATH}")
 df = pd.read_csv(INPUT_PATH)
@@ -79,10 +77,8 @@ print(f"\nSaved to: {OUTPUT_PATH}")
 
 print("\n" + "=" * 60)
 print("LOG-TRANSFORMED COLUMNS:")
-print("=" * 60)
 for col, skew in log_transformed:
     print(f"  {col}_log  (original skew: {skew:.3f})")
 
 print("\n" + "=" * 60)
 print("DONE!")
-print("=" * 60)

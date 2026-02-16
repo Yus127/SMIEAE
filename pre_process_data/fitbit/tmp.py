@@ -216,7 +216,6 @@ def create_recommendations(summary_df, completeness_threshold=10, users_threshol
 if __name__ == "__main__":
     # Analyze daily summary files
     print("ANALYZING DAILY SUMMARY FILES:")
-    print("="*80)
     daily_summary = analyze_completeness("processed_data", output_file="daily_completeness_report.csv")
     
     if daily_summary is not None:
@@ -240,5 +239,4 @@ if __name__ == "__main__":
     # Optionally analyze time-series files
     print("\n\n")
     print("ANALYZING TIME-SERIES FILES:")
-    print("="*80)
     timeseries_summary = analyze_timeseries_completeness("/Users/YusMolina/Downloads/smieae/data/data_clean/fitbit", output_file="timeseries_completeness_report.csv")

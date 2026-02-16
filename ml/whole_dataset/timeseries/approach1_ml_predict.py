@@ -25,10 +25,8 @@ INPUT_PATH = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/data_
 OUTPUT_DIR = '/Users/YusMolina/Downloads/smieae/results/whole_dataset/timeseries/model_comparison/'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-print("="*80)
 print("MULTI-MODEL COMPARISON: STRESS & ANXIETY PREDICTION")
 print("TIME SERIES SPLIT (70% Train / 15% Val / 15% Test)")
-print("="*80)
 
 # Load data
 df = pd.read_csv(INPUT_PATH)
@@ -98,17 +96,13 @@ def prepare_data_timeseries(df, target_col, feature_cols):
     
     return X_train_scaled, X_val_scaled, X_test_scaled, y_train, y_val, y_test, p33, p67
 
-# ============================================================================
 # PREPARE DATA FOR BOTH TARGETS (TIME SERIES SPLIT)
-# ============================================================================
 
 print("\nPreparing data with time series split...")
 X_train_s, X_val_s, X_test_s, y_train_s, y_val_s, y_test_s, p33_s, p67_s = prepare_data_timeseries(df, 'stress_level', feature_columns)
 X_train_a, X_val_a, X_test_a, y_train_a, y_val_a, y_test_a, p33_a, p67_a = prepare_data_timeseries(df, 'anxiety_level', feature_columns)
 
-# ============================================================================
 # DEFINE ALL MODELS
-# ============================================================================
 
 print("\nInitializing models...")
 
@@ -151,9 +145,7 @@ models = {
     'Naive Bayes': GaussianNB()
 }
 
-# ============================================================================
 # TRAIN ALL MODELS AND COLLECT PREDICTIONS
-# ============================================================================
 
 print("\nTraining all models...")
 
@@ -192,9 +184,7 @@ for model_name, model_template in models.items():
         'test_proba': anxiety_model.predict_proba(X_test_a)
     }
 
-# ============================================================================
 # CALCULATE METRICS FOR ALL MODELS
-# ============================================================================
 
 def calculate_metrics(y_true, y_pred, y_pred_proba):
     """Calculate comprehensive metrics for multiclass classification"""
@@ -241,9 +231,7 @@ for model_name in models.keys():
         'test': calculate_metrics(y_test_a, anxiety_results[model_name]['test_pred'], anxiety_results[model_name]['test_proba'])
     }
 
-# ============================================================================
 # VISUALIZATION 1: MODEL COMPARISON - TEST SET PERFORMANCE
-# ============================================================================
 
 print("\nGenerating visualizations...")
 
@@ -300,9 +288,7 @@ plt.tight_layout()
 plt.savefig(OUTPUT_DIR + 'model_comparison_test.png', dpi=300, bbox_inches='tight')
 print("Saved: model_comparison_test.png")
 
-# ============================================================================
 # VISUALIZATION 2: CONFUSION MATRICES FOR ALL MODELS
-# ============================================================================
 
 fig, axes = plt.subplots(5, 2, figsize=(14, 28))
 fig.suptitle('Confusion Matrices: All Models (Test Set - Time Series Split)', fontsize=16, fontweight='bold')
@@ -328,9 +314,7 @@ plt.tight_layout()
 plt.savefig(OUTPUT_DIR + 'confusion_matrices_all_models.png', dpi=300, bbox_inches='tight')
 print("Saved: confusion_matrices_all_models.png")
 
-# ============================================================================
 # VISUALIZATION 3: ROC CURVES FOR ALL MODELS
-# ============================================================================
 
 def plot_roc_curves_multimodel(y_true, results_dict, ax, title, n_classes=3):
     """Plot ROC curves for multiple models"""
@@ -367,9 +351,7 @@ plt.tight_layout()
 plt.savefig(OUTPUT_DIR + 'roc_curves_all_models.png', dpi=300, bbox_inches='tight')
 print("Saved: roc_curves_all_models.png")
 
-# ============================================================================
 # VISUALIZATION 4: GENERALIZATION ANALYSIS (TRAIN VS TEST)
-# ============================================================================
 
 fig, axes = plt.subplots(1, 2, figsize=(18, 7))
 fig.suptitle('Generalization Analysis: Train vs Test Accuracy (Time Series Split)', fontsize=16, fontweight='bold')
@@ -423,9 +405,7 @@ plt.tight_layout()
 plt.savefig(OUTPUT_DIR + 'generalization_analysis.png', dpi=300, bbox_inches='tight')
 print("Saved: generalization_analysis.png")
 
-# ============================================================================
 # VISUALIZATION 5: TRAIN/VAL/TEST PERFORMANCE ACROSS ALL SPLITS
-# ============================================================================
 
 fig, axes = plt.subplots(2, 2, figsize=(18, 12))
 fig.suptitle('Performance Across Train/Val/Test Splits (Time Series)', fontsize=16, fontweight='bold')
@@ -490,9 +470,7 @@ plt.tight_layout()
 plt.savefig(OUTPUT_DIR + 'performance_across_splits.png', dpi=300, bbox_inches='tight')
 print("Saved: performance_across_splits.png")
 
-# ============================================================================
 # VISUALIZATION 6: FEATURE IMPORTANCE COMPARISON (for tree-based models)
-# ============================================================================
 
 fig, axes = plt.subplots(1, 2, figsize=(20, 8))
 fig.suptitle('Feature Importance: Tree-Based Models (Time Series Split)', fontsize=16, fontweight='bold')
@@ -545,9 +523,7 @@ plt.tight_layout()
 plt.savefig(OUTPUT_DIR + 'feature_importance_comparison.png', dpi=300, bbox_inches='tight')
 print("Saved: feature_importance_comparison.png")
 
-# ============================================================================
 # SAVE ALL METRICS TO CSV
-# ============================================================================
 
 print("\nSaving metrics to CSV...")
 
@@ -578,18 +554,14 @@ metrics_df = pd.DataFrame(all_metrics_data)
 metrics_df.to_csv(OUTPUT_DIR + 'all_models_metrics_timeseries.csv', index=False)
 print("Saved: all_models_metrics_timeseries.csv")
 
-# ============================================================================
 # DETAILED ANALYSIS REPORT
-# ============================================================================
 
 print("\n" + "="*80)
 print("DETAILED ANALYSIS REPORT (TIME SERIES SPLIT)")
-print("="*80)
 
 for target_name, metrics_collection in [('STRESS', stress_metrics), ('ANXIETY', anxiety_metrics)]:
     print(f"\n{'='*80}")
     print(f"{target_name} PREDICTION - ALL MODELS COMPARISON")
-    print('='*80)
     
     for model_name in models.keys():
         print(f"\n{'-'*80}")
@@ -624,7 +596,6 @@ for target_name, metrics_collection in [('STRESS', stress_metrics), ('ANXIETY', 
 
 print("\n" + "="*80)
 print("BEST MODELS SUMMARY (TIME SERIES SPLIT)")
-print("="*80)
 
 # Find best models
 print("\nBest Test Set Performance:")
@@ -644,7 +615,6 @@ print(f"  Val Accuracy: {best_anxiety[1]['val']['accuracy']:.4f} ({best_anxiety[
 
 print("\n" + "="*80)
 print("TIME SERIES CONSIDERATIONS")
-print("="*80)
 print("\nKey Observations:")
 print("  - Sequential split respects temporal order (no data leakage)")
 print("  - Test set represents future unseen data")
@@ -654,7 +624,6 @@ print("  - Models with stable performance across splits generalize better to fut
 
 print("\n" + "="*80)
 print("ANALYSIS COMPLETE")
-print("="*80)
 print(f"\nAll visualizations and metrics saved to: {OUTPUT_DIR}")
 print("\nFiles created:")
 print("  - model_comparison_test.png")

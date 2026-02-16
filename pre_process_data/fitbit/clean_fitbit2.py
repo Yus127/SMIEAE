@@ -447,13 +447,5 @@ def process_multiple_csvs(input_dir, output_dir="processed_data"):
     print("Processing complete!")
 
 
-# Example usage:
 if __name__ == "__main__":
-    # Option 1: Process a single file
-    # process_csv_file("your_file.csv", output_dir="processed_data")
-    
-    # Option 2: Process all CSV files in a directory
-    # process_multiple_csvs("path/to/your/csv/directory", output_dir="processed_data")
-    
-    # Example with current directory
     process_multiple_csvs("/Users/YusMolina/Downloads/smieae/data/original_data/fitbit/consolidated_output", output_dir="/Users/YusMolina/Downloads/smieae/data/data_clean/fitbit")

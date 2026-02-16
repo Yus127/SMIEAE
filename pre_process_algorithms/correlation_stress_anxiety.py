@@ -12,9 +12,7 @@ output_folder = "/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/co
 Path(output_folder).mkdir(exist_ok=True)
 
 # Load the combined data
-print("="*60)
 print("LOADING COMBINED DATA")
-print("="*60)
 try:
     df = pd.read_csv(input_file)
     print(f"Loaded: {input_file}")
@@ -27,7 +25,6 @@ except Exception as e:
 # Display basic information
 print("\n" + "="*60)
 print("DATASET OVERVIEW")
-print("="*60)
 print(df.info())
 print("\n")
 print(df.describe())
@@ -45,17 +42,15 @@ print(f"Columns: {numeric_cols}")
 # Calculate correlation matrix
 print("\n" + "="*60)
 print("CALCULATING CORRELATION MATRIX")
-print("="*60)
 correlation_matrix = df[numeric_cols].corr()
 
 # Save correlation matrix to CSV
 correlation_matrix.to_csv(f"{output_folder}/correlation_matrix.csv")
-print(f"✓ Correlation matrix saved to {output_folder}/correlation_matrix.csv")
+print(f" Correlation matrix saved to {output_folder}/correlation_matrix.csv")
 
 # Create full correlation heatmap (without numbers)
 print("\n" + "="*60)
 print("CREATING VISUALIZATIONS")
-print("="*60)
 plt.figure(figsize=(20, 18))
 sns.heatmap(correlation_matrix, 
             annot=False,
@@ -67,13 +62,12 @@ sns.heatmap(correlation_matrix,
 plt.title('Correlation Matrix - All Variables (Including Stress & Anxiety)', fontsize=18, pad=20)
 plt.tight_layout()
 plt.savefig(f"{output_folder}/correlation_heatmap_full.png", dpi=300, bbox_inches='tight')
-print(f"✓ Full correlation heatmap saved")
+print(f" Full correlation heatmap saved")
 plt.close()
 
 # Find strong correlations (|r| > 0.5)
 print("\n" + "="*60)
 print("IDENTIFYING STRONG CORRELATIONS")
-print("="*60)
 strong_correlations = []
 for i in range(len(correlation_matrix.columns)):
     for j in range(i+1, len(correlation_matrix.columns)):
@@ -102,7 +96,6 @@ else:
 # Focus on stress and anxiety correlations
 print("\n" + "="*60)
 print("STRESS & ANXIETY CORRELATIONS")
-print("="*60)
 
 stress_anxiety_vars = ['stress_level', 'anxiety_level']
 available_psych_vars = [var for var in stress_anxiety_vars if var in numeric_cols]
@@ -158,7 +151,7 @@ if available_psych_vars:
             plt.tight_layout()
             plt.savefig(f"{output_folder}/correlation_heatmap_stress_anxiety_focused.png", 
                        dpi=300, bbox_inches='tight')
-            print(f"\n✓ Focused stress/anxiety heatmap saved")
+            print(f"\n Focused stress/anxiety heatmap saved")
             plt.close()
 else:
     print("Stress and/or anxiety variables not found in dataset")
@@ -167,7 +160,6 @@ else:
 if available_psych_vars and not strong_corr_df.empty:
     print("\n" + "="*60)
     print("CREATING SCATTER PLOTS")
-    print("="*60)
     
     for psych_var in available_psych_vars:
         # Get top 6 correlations (positive and negative)
@@ -213,16 +205,15 @@ if available_psych_vars and not strong_corr_df.empty:
             plt.tight_layout()
             plt.savefig(f"{output_folder}/scatter_plots_{psych_var}.png", 
                        dpi=300, bbox_inches='tight')
-            print(f"✓ Scatter plots for {psych_var} saved")
+            print(f" Scatter plots for {psych_var} saved")
             plt.close()
 
 # Summary statistics by user
 print("\n" + "="*60)
 print("SUMMARY STATISTICS BY USER")
-print("="*60)
 user_summary = df.groupby('userid')[numeric_cols].mean()
 user_summary.to_csv(f"{output_folder}/user_summary_stats.csv")
-print(f"✓ User summary statistics saved")
+print(f" User summary statistics saved")
 print("\nFirst 5 users:")
 print(user_summary.head())
 
@@ -230,7 +221,6 @@ print(user_summary.head())
 if available_psych_vars:
     print("\n" + "="*60)
     print("STRESS & ANXIETY DATA AVAILABILITY")
-    print("="*60)
     for var in available_psych_vars:
         total = len(df)
         available = df[var].notna().sum()
@@ -242,8 +232,6 @@ if available_psych_vars:
         print(f"  Range: {user_coverage.min()}-{user_coverage.max()} records")
 
 print("\n" + "="*60)
-print("ANALYSIS COMPLETE!")
-print("="*60)
 print(f"All results saved to '{output_folder}' folder")
 print("\nGenerated files:")
 print("1. correlation_matrix.csv - Full correlation matrix")

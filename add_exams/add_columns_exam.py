@@ -31,7 +31,6 @@ university_2_exams = [
 
 semana_santa = ('2025-04-14', '2025-04-19')
 
-# HARDCODED PATHS
 INPUT_PATH = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/combined_daily_data_with_log_transforms.csv'
 OUTPUT_PATH = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/data_with_exam_features.csv'
 DATE_COL = 'unified_date'
@@ -139,7 +138,6 @@ print(f"Data saved to: {OUTPUT_PATH}")
 # Print summary
 print("\n" + "="*80)
 print("SUMMARY")
-print("="*80)
 print(f"Total rows processed: {len(df)}")
 print(f"Exam period observations: {df['is_exam_period'].sum()}")
 print(f"Semana Santa observations: {df['is_semana_santa'].sum()}")
@@ -152,5 +150,4 @@ new_cols = ['university', 'is_exam_period', 'exam_period_name', 'is_semana_santa
            'weeks_to_next_exam', 'weeks_since_last_exam', 'exam_proximity_category']
 for col in new_cols:
     print(f"  - {col}")
-print("="*80)
 print("DONE!")

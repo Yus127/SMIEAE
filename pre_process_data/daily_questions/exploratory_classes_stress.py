@@ -32,7 +32,6 @@ CLEANED_CSV = r"/Users/YusMolina/Downloads/smieae/data/data_clean/daily_question
 USERS_COURSES_CSV = r"/Users/YusMolina/Downloads/smieae/data/original_data/users-courses.csv"
 OUTPUT_DIR = r"/Users/YusMolina/Downloads/smieae/data/data_clean/stress_anxiety_by_course"
 EXPECTED_COURSES = ["A1", "A2", "B", "C"]
-# --------------------------
 
 
 
@@ -96,9 +95,7 @@ def main() -> int:
     d[anxiety_col] = pd.to_numeric(d[anxiety_col], errors="coerce")
     d = d.dropna(subset=[stress_col, anxiety_col])
 
-    # -------------------------
     # Aggregations
-    # -------------------------
 
     # Overall mean per course
     course_overall = (
@@ -128,9 +125,7 @@ def main() -> int:
     course_daily = course_daily.sort_values(["course", "date_only"])
 
 
-    # -------------------------
     # Plots
-    # -------------------------
 
     # 1) Bar chart: overall averages by course
     courses = course_overall["course"].astype(str).tolist()

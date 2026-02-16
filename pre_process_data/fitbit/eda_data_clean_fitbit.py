@@ -11,9 +11,7 @@ def analyze_daily_summary_df(df, user_name):
     print(f"{'='*80}\n")
     
     # Basic Information
-    print("=" * 80)
     print("1. BASIC INFORMATION")
-    print("=" * 80)
     print(f"Total days: {len(df):,}")
     print(f"Total variables: {len(df.columns):,}")
     print(f"Memory usage: {df.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
@@ -27,7 +25,6 @@ def analyze_daily_summary_df(df, user_name):
     # Variable Categories
     print(f"\n{'=' * 80}")
     print("2. VARIABLE CATEGORIES")
-    print("=" * 80)
     
     # Group variables by category
     sleep_vars = [col for col in df.columns if 'sleep' in col.lower()]
@@ -49,7 +46,6 @@ def analyze_daily_summary_df(df, user_name):
     # Missing Data Analysis
     print(f"\n{'=' * 80}")
     print("3. MISSING DATA ANALYSIS")
-    print("=" * 80)
     
     missing_data = pd.DataFrame({
         'Variable': df.columns,
@@ -68,7 +64,6 @@ def analyze_daily_summary_df(df, user_name):
     # Numeric Statistics by Category
     print(f"\n{'=' * 80}")
     print("4. SLEEP METRICS SUMMARY")
-    print("=" * 80)
     
     sleep_numeric = [col for col in sleep_vars if df[col].dtype in ['float64', 'int64']]
     if sleep_numeric:
@@ -78,7 +73,6 @@ def analyze_daily_summary_df(df, user_name):
     
     print(f"\n{'=' * 80}")
     print("5. HEART RATE VARIABILITY METRICS SUMMARY")
-    print("=" * 80)
     
     hrv_numeric = [col for col in hrv_vars if df[col].dtype in ['float64', 'int64']]
     if hrv_numeric:
@@ -88,7 +82,6 @@ def analyze_daily_summary_df(df, user_name):
     
     print(f"\n{'=' * 80}")
     print("6. RESPIRATORY METRICS SUMMARY")
-    print("=" * 80)
     
     resp_numeric = [col for col in respiratory_vars if df[col].dtype in ['float64', 'int64']]
     if resp_numeric:
@@ -98,7 +91,6 @@ def analyze_daily_summary_df(df, user_name):
     
     print(f"\n{'=' * 80}")
     print("7. SpO2/OXYGEN METRICS SUMMARY")
-    print("=" * 80)
     
     spo2_numeric = [col for col in spo2_vars if df[col].dtype in ['float64', 'int64']]
     if spo2_numeric:
@@ -108,7 +100,6 @@ def analyze_daily_summary_df(df, user_name):
     
     print(f"\n{'=' * 80}")
     print("8. ACTIVITY METRICS SUMMARY")
-    print("=" * 80)
     
     activity_numeric = [col for col in activity_vars if df[col].dtype in ['float64', 'int64']]
     if activity_numeric:
@@ -119,7 +110,6 @@ def analyze_daily_summary_df(df, user_name):
     # Data Completeness
     print(f"\n{'=' * 80}")
     print("9. DATA COMPLETENESS")
-    print("=" * 80)
     
     completeness = (1 - df.isnull().sum().sum() / (len(df) * len(df.columns))) * 100
     print(f"Overall data completeness: {completeness:.2f}%")
@@ -167,9 +157,7 @@ def aggregate_daily_summaries():
     print("="*80 + "\n")
     
     # Individual analysis
-    print("="*80)
     print("INDIVIDUAL USER ANALYSES")
-    print("="*80)
     
     all_users_stats = []
     all_columns = set()
@@ -237,7 +225,6 @@ def aggregate_daily_summaries():
     
     print("\n" + "="*80)
     print("AGGREGATE STATISTICS - ALL USERS")
-    print("="*80)
     
     print("\n1. OVERALL STATISTICS")
     print("-" * 80)
@@ -325,15 +312,14 @@ def aggregate_daily_summaries():
     output_dir = base_dir
     summary_csv = output_dir / "daily_summary_users_statistics.csv"
     summary_df.to_csv(summary_csv, index=False)
-    print(f"\n✓ Saved user statistics to: {summary_csv}")
+    print(f"\n Saved user statistics to: {summary_csv}")
     
     var_presence_csv = output_dir / "daily_summary_variable_presence.csv"
     var_presence_df.to_csv(var_presence_csv, index=False)
-    print(f"✓ Saved variable presence to: {var_presence_csv}")
+    print(f" Saved variable presence to: {var_presence_csv}")
     
     print("\n" + "="*80)
     print("ANALYSIS COMPLETE")
-    print("="*80)
 
 if __name__ == "__main__":
     aggregate_daily_summaries()

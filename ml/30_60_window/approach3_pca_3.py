@@ -18,12 +18,10 @@ import xgboost as xgb
 import warnings
 warnings.filterwarnings('ignore')
 
-print("="*80)
 print("ML PIPELINE: PCA + 3-CLASS CLASSIFICATION")
 print("STRESS & ANXIETY - TIME SERIES SPLIT (70-15-15)")
 print("SEPARATE ANALYSIS FOR 30MIN AND 60MIN WINDOWS")
 print("SIMPLIFIED FEATURE ENGINEERING (NO USER CLUSTERING)")
-print("="*80)
 
 # Paths
 ml_dir = "/Users/YusMolina/Downloads/smieae/data/ml_ready"
@@ -48,26 +46,23 @@ for file_idx, file in enumerate(files):
     
     print("\n" + "="*80)
     print(f"PROCESSING: {window_type.upper()} WINDOW")
-    print("="*80)
     
     # Create window-specific output directory
     window_output_dir = os.path.join(output_dir, f"{window_type}_window")
     os.makedirs(window_output_dir, exist_ok=True)
     os.makedirs(os.path.join(window_output_dir, "plots"), exist_ok=True)
     
-    # ========================================================================
     # 1. LOAD DATA
-    # ========================================================================
     print(f"\n1. LOADING DATA ({window_type})")
     print("-"*80)
     
     data_file = os.path.join(ml_dir, file)
     if not os.path.exists(data_file):
-        print(f"✗ File not found: {data_file}")
+        print(f" File not found: {data_file}")
         continue
     
     df = pd.read_csv(data_file)
-    print(f"✓ Loaded {len(df)} observations")
+    print(f" Loaded {len(df)} observations")
     
     # Define base features
     base_feature_columns = [
@@ -123,16 +118,16 @@ for file_idx, file in enumerate(files):
     targets_to_process = []
     if stress_target:
         targets_to_process.append(('Stress', stress_target))
-        print(f"✓ Stress target: {stress_target}")
+        print(f" Stress target: {stress_target}")
     if anxiety_target:
         targets_to_process.append(('Anxiety', anxiety_target))
-        print(f"✓ Anxiety target: {anxiety_target}")
+        print(f" Anxiety target: {anxiety_target}")
     
     if not targets_to_process:
-        print("✗ No stress or anxiety targets found!")
+        print(" No stress or anxiety targets found!")
         continue
     
-    print(f"\n✓ Will train models for {len(targets_to_process)} target(s): {', '.join([t[0] for t in targets_to_process])}")
+    print(f"\n Will train models for {len(targets_to_process)} target(s): {', '.join([t[0] for t in targets_to_process])}")
     
     # Ensure userid column exists
     if 'userid' not in df.columns:
@@ -153,35 +148,31 @@ for file_idx, file in enumerate(files):
         os.makedirs(target_output_dir, exist_ok=True)
         os.makedirs(os.path.join(target_output_dir, "plots"), exist_ok=True)
         
-        # ====================================================================
         # 2. SORT BY TIME AND PREPARE DATA
-        # ====================================================================
         print(f"\n2. DATA PREPARATION ({target_name} - {window_type})")
         print("-"*80)
         
         # Sort by timestamp (critical for time series split)
         if 'timestamp' in df.columns:
             df_sorted = df.sort_values('timestamp').reset_index(drop=True)
-            print("✓ Data sorted by timestamp (chronological order)")
+            print(" Data sorted by timestamp (chronological order)")
         elif 'date' in df.columns:
             df_sorted = df.sort_values('date').reset_index(drop=True)
-            print("✓ Data sorted by date (chronological order)")
+            print(" Data sorted by date (chronological order)")
         elif 'datetime' in df.columns:
             df_sorted = df.sort_values('datetime').reset_index(drop=True)
-            print("✓ Data sorted by datetime (chronological order)")
+            print(" Data sorted by datetime (chronological order)")
         else:
             df_sorted = df.copy()
-            print("⚠ Warning: No timestamp column found. Assuming chronological order.")
+            print(" Warning: No timestamp column found. Assuming chronological order.")
         
         # Select base features and target
         df_clean = df_sorted[available_base_features + available_optional_features + [primary_target, 'userid']].copy()
         df_clean = df_clean.dropna(subset=[primary_target])
         
-        print(f"✓ Clean dataset: {len(df_clean)} observations from {df_clean['userid'].nunique()} users")
+        print(f" Clean dataset: {len(df_clean)} observations from {df_clean['userid'].nunique()} users")
         
-        # ====================================================================
         # 3. SIMPLIFIED FEATURE ENGINEERING (PERSONAL BASELINES)
-        # ====================================================================
         print(f"\n3. FEATURE ENGINEERING - PERSONAL BASELINES ({target_name})")
         print("-"*80)
         
@@ -216,11 +207,9 @@ for file_idx, file in enumerate(files):
         if 'daily_respiratory_rate_daily_respiratory_rate' in df_clean.columns:
             baseline_features['resp_baseline'] = df_clean.groupby('userid')['daily_respiratory_rate_daily_respiratory_rate'].transform('mean')
         
-        print(f"✓ Created {len(baseline_features)} baseline features")
+        print(f" Created {len(baseline_features)} baseline features")
         
-        # ====================================================================
         # 4. CREATE DEVIATION AND INTERACTION FEATURES
-        # ====================================================================
         print(f"\n4. CREATING DEVIATION AND INTERACTION FEATURES ({target_name})")
         print("-"*80)
         
@@ -299,11 +288,9 @@ for file_idx, file in enumerate(files):
             df_clean['resp_efficiency'] = df_clean['minute_spo2_value_mean'] / (df_clean['daily_respiratory_rate_daily_respiratory_rate'] + 1)
             engineered_features.append('resp_efficiency')
         
-        print(f"✓ Created {len(engineered_features)} engineered features")
+        print(f" Created {len(engineered_features)} engineered features")
         
-        # ====================================================================
         # 5. PREPARE FINAL FEATURE SET
-        # ====================================================================
         print(f"\n5. PREPARING FINAL FEATURE SET ({target_name})")
         print("-"*80)
         
@@ -331,11 +318,9 @@ for file_idx, file in enumerate(files):
                 lower = df_model[col].quantile(0.001)
                 df_model[col] = df_model[col].clip(lower=lower, upper=upper)
         
-        print(f"✓ Clean dataset: {len(df_model)} observations")
+        print(f" Clean dataset: {len(df_model)} observations")
         
-        # ====================================================================
         # 6. CREATE 3-CLASS TARGET
-        # ====================================================================
         print(f"\n6. CREATING 3-CLASS TARGET ({target_name})")
         print("-"*80)
         
@@ -354,9 +339,7 @@ for file_idx, file in enumerate(files):
         
         X = df_model[all_features]
         
-        # ====================================================================
         # 7. TIME SERIES SPLIT (70-15-15)
-        # ====================================================================
         print(f"\n7. TIME SERIES SPLIT: 70% TRAIN - 15% VAL - 15% TEST ({target_name})")
         print("-"*80)
         print("Using chronological split (no shuffling) to respect temporal order")
@@ -383,9 +366,7 @@ for file_idx, file in enumerate(files):
         print(f"  Test:  {len(X_test)} ({len(X_test)/n_samples*100:.1f}%)")
         print(f"    Low: {(y_test==0).sum()}, Medium: {(y_test==1).sum()}, High: {(y_test==2).sum()}")
         
-        # ====================================================================
         # 8. APPLY PCA TO FEATURES (SINGLE PCA STEP)
-        # ====================================================================
         print(f"\n8. APPLYING PCA TO FEATURE SET ({target_name})")
         print("-"*80)
         
@@ -414,14 +395,11 @@ for file_idx, file in enumerate(files):
         X_val_pca = pca_final.transform(X_val_scaled)
         X_test_pca = pca_final.transform(X_test_scaled)
         
-        print(f"\n✓ Dimensionality reduction: {X_train_scaled.shape[1]} → {X_train_pca.shape[1]} features")
+        print(f"\n Dimensionality reduction: {X_train_scaled.shape[1]} → {X_train_pca.shape[1]} features")
         print(f"  Retained variance: {pca_final.explained_variance_ratio_.sum()*100:.1f}%")
         
-        # ====================================================================
         # 9. TRAIN MODELS ON PCA FEATURES
-        # ====================================================================
         print(f"\n9. TRAINING MODELS - 3-CLASS {target_name.upper()} ({window_type})")
-        print("="*80)
         
         models = {
             'XGBoost': xgb.XGBClassifier(n_estimators=200, max_depth=6, learning_rate=0.1, 
@@ -482,9 +460,7 @@ for file_idx, file in enumerate(files):
                 'y_test_pred': y_test_pred, 'y_test_proba': y_test_proba
             }
         
-        # ====================================================================
         # 10. ENSEMBLE MODEL
-        # ====================================================================
         print(f"\n10. ENSEMBLE MODEL ({target_name})")
         print("-"*80)
         
@@ -535,11 +511,8 @@ for file_idx, file in enumerate(files):
             'y_test_pred': y_test_pred_ens, 'y_test_proba': y_test_proba_ens
         }
         
-        # ====================================================================
         # 11. GENERATE ROC CURVES
-        # ====================================================================
         print(f"\n11. GENERATING ROC CURVES ({target_name} - {window_type})")
-        print("="*80)
         
         # Binarize the test labels for ROC curve
         y_test_bin = label_binarize(y_test, classes=[0, 1, 2])
@@ -597,7 +570,7 @@ for file_idx, file in enumerate(files):
                        dpi=300, bbox_inches='tight')
             plt.close()
             
-            print(f"✓ Saved ROC curve for {model_name}")
+            print(f" Saved ROC curve for {model_name}")
         
         # Create comparison ROC curve for each class
         print(f"\nGenerating comparison ROC curves (one per class)...")
@@ -631,7 +604,7 @@ for file_idx, file in enumerate(files):
                        dpi=300, bbox_inches='tight')
             plt.close()
             
-            print(f"✓ Saved comparison ROC curve for {class_name} class")
+            print(f" Saved comparison ROC curve for {class_name} class")
         
         # Create micro-average and macro-average ROC curve for best model
         print(f"\nGenerating micro/macro-average ROC curves for best model...")
@@ -688,7 +661,7 @@ for file_idx, file in enumerate(files):
                    dpi=300, bbox_inches='tight')
         plt.close()
         
-        print(f"✓ Saved multi-class ROC curve (micro/macro averages)")
+        print(f" Saved multi-class ROC curve (micro/macro averages)")
         
         # Validation vs Test ROC comparison for best model (High class)
         print(f"\nGenerating validation vs test ROC comparison...")
@@ -727,18 +700,15 @@ for file_idx, file in enumerate(files):
                    dpi=300, bbox_inches='tight')
         plt.close()
         
-        print(f"✓ Saved validation vs test ROC curve")
+        print(f" Saved validation vs test ROC curve")
         
-        # ====================================================================
         # 12. RESULTS
-        # ====================================================================
         print(f"\n12. FINAL RESULTS ({target_name} - {window_type})")
-        print("="*80)
         
         best_name = max(results.keys(), key=lambda k: results[k]['test_f1'])
         best = results[best_name]
         
-        print(f"\n🏆 BEST MODEL: {best_name}")
+        print(f"\n BEST MODEL: {best_name}")
         print(f"   Validation F1:  {results[best_name]['val_f1']:.4f} (weighted)")
         print(f"   Validation AUC: {results[best_name]['val_auc']:.4f}")
         print(f"   Test F1:        {best['test_f1']:.4f} (weighted)")
@@ -751,7 +721,7 @@ for file_idx, file in enumerate(files):
         print(f"     Medium (Class 1): F1 = {best['test_f1_per_class'][1]:.4f}")
         print(f"     High (Class 2):   F1 = {best['test_f1_per_class'][2]:.4f}")
         
-        print(f"\n📊 PERFORMANCE WITH PCA:")
+        print(f"\n PERFORMANCE WITH PCA:")
         print(f"   Original features:  {len(all_features)}")
         print(f"   PCA components:     {n_components} (retained {pca_final.explained_variance_ratio_.sum()*100:.1f}% variance)")
         print(f"   Test F1 (3-class):  {best['test_f1']:.4f}")
@@ -771,7 +741,7 @@ for file_idx, file in enumerate(files):
         }
         
         # Detailed classification report
-        print(f"\n📋 DETAILED CLASSIFICATION REPORT ({best_name}):")
+        print(f"\n DETAILED CLASSIFICATION REPORT ({best_name}):")
         print(classification_report(y_test, best['y_test_pred'], 
                                    target_names=[f'Low {target_name}', f'Medium {target_name}', f'High {target_name}'],
                                    zero_division=0))
@@ -782,11 +752,9 @@ for file_idx, file in enumerate(files):
             for name, res in results.items()
         ])
         comparison_df.to_csv(os.path.join(target_output_dir, 'results_pca_3class_simplified.csv'), index=False)
-        print(f"\n✓ Saved: results_pca_3class_simplified.csv")
+        print(f"\n Saved: results_pca_3class_simplified.csv")
         
-        # ====================================================================
         # 13. OTHER VISUALIZATIONS
-        # ====================================================================
         print(f"\n13. CREATING OTHER VISUALIZATIONS ({target_name})")
         print("-"*80)
         
@@ -817,7 +785,7 @@ for file_idx, file in enumerate(files):
         plt.suptitle(f'PCA Analysis - {target_name} ({window_type})', fontsize=14, fontweight='bold')
         plt.tight_layout()
         plt.savefig(os.path.join(target_output_dir, 'plots', 'pca_variance.png'), dpi=300)
-        print("✓ Saved: pca_variance.png")
+        print(" Saved: pca_variance.png")
         plt.close()
         
         # Confusion Matrix
@@ -839,7 +807,7 @@ for file_idx, file in enumerate(files):
         
         plt.tight_layout()
         plt.savefig(os.path.join(target_output_dir, 'plots', 'confusion_matrix_3class.png'), dpi=300)
-        print("✓ Saved: confusion_matrix_3class.png")
+        print(" Saved: confusion_matrix_3class.png")
         plt.close()
         
         # Model comparison
@@ -861,16 +829,13 @@ for file_idx, file in enumerate(files):
         
         plt.tight_layout()
         plt.savefig(os.path.join(target_output_dir, 'plots', 'model_comparison.png'), dpi=300)
-        print("✓ Saved: model_comparison.png")
+        print(" Saved: model_comparison.png")
         plt.close()
         
-        # ====================================================================
         # 14. SUMMARY
-        # ====================================================================
         print(f"\n14. SUMMARY ({target_name} - {window_type})")
-        print("="*80)
         
-        print(f"\n📊 ROC Curves Generated:")
+        print(f"\n ROC Curves Generated:")
         print(f"   • Individual curves for each model (5 plots, 3 classes each)")
         print(f"   • Comparison curves per class (3 plots)")
         print(f"   • Multi-class ROC with micro/macro averages (1 plot)")
@@ -878,15 +843,12 @@ for file_idx, file in enumerate(files):
         print(f"   • Total: 10 ROC curve visualizations")
         
         print("\n" + "#"*80)
-        print(f"# ✅ COMPLETE: {target_name} ({window_type})")
+        print(f"#  COMPLETE: {target_name} ({window_type})")
         print("#"*80)
 
-# ============================================================================
 # OVERALL COMPARISON
-# ============================================================================
 print("\n\n" + "="*80)
 print("OVERALL COMPARISON: STRESS vs ANXIETY (30MIN vs 60MIN)")
-print("="*80)
 
 if all_results:
     print("\n" + "-"*80)
@@ -938,9 +900,8 @@ if all_results:
     if summary_data:
         summary_df = pd.DataFrame(summary_data)
         summary_df.to_csv(os.path.join(output_dir, 'overall_summary_pca_3class_simplified.csv'), index=False)
-        print("\n✓ Saved: overall_summary_pca_3class_simplified.csv")
+        print("\n Saved: overall_summary_pca_3class_simplified.csv")
 
-print("\n✅ COMPLETE! All windows and targets processed.")
 print("\nKEY CHANGES FROM ORIGINAL:")
 print("  • Removed user-based clustering (no PCA on user profiles)")
 print("  • Simplified feature engineering with personal baselines")

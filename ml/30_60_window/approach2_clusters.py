@@ -15,11 +15,9 @@ import xgboost as xgb
 import warnings
 warnings.filterwarnings('ignore')
 
-print("="*80)
 print("ML PIPELINE: STRESS & ANXIETY - BINARY CLASSIFICATION")
 print("USER FEATURES + TIME SERIES SPLIT (70-15-15) + NO TEMPORAL LEAKAGE")
 print("SEPARATE ANALYSIS FOR 30MIN AND 60MIN WINDOWS")
-print("="*80)
 
 # Paths
 ml_dir = "/Users/YusMolina/Downloads/smieae/data/ml_ready"
@@ -44,26 +42,23 @@ for file_idx, file in enumerate(files):
     
     print("\n" + "="*80)
     print(f"PROCESSING: {window_type.upper()} WINDOW")
-    print("="*80)
     
     # Create window-specific output directory
     window_output_dir = os.path.join(output_dir, f"{window_type}_window")
     os.makedirs(window_output_dir, exist_ok=True)
     os.makedirs(os.path.join(window_output_dir, "plots"), exist_ok=True)
     
-    # ========================================================================
     # 1. LOAD DATA
-    # ========================================================================
     print(f"\n1. LOADING DATA ({window_type})")
     print("-"*80)
     
     data_file = os.path.join(ml_dir, file)
     if not os.path.exists(data_file):
-        print(f"✗ File not found: {data_file}")
+        print(f" File not found: {data_file}")
         continue
     
     df = pd.read_csv(data_file)
-    print(f"✓ Loaded {len(df)} observations")
+    print(f" Loaded {len(df)} observations")
     
     # Define features
     feature_columns = [
@@ -104,16 +99,16 @@ for file_idx, file in enumerate(files):
     targets_to_process = []
     if stress_target:
         targets_to_process.append(('Stress', stress_target))
-        print(f"✓ Stress target: {stress_target}")
+        print(f" Stress target: {stress_target}")
     if anxiety_target:
         targets_to_process.append(('Anxiety', anxiety_target))
-        print(f"✓ Anxiety target: {anxiety_target}")
+        print(f" Anxiety target: {anxiety_target}")
     
     if not targets_to_process:
-        print("✗ No stress or anxiety targets found!")
+        print(" No stress or anxiety targets found!")
         continue
     
-    print(f"\n✓ Will train models for {len(targets_to_process)} target(s): {', '.join([t[0] for t in targets_to_process])}")
+    print(f"\n Will train models for {len(targets_to_process)} target(s): {', '.join([t[0] for t in targets_to_process])}")
     
     # Ensure userid column exists
     if 'userid' not in df.columns:
@@ -134,25 +129,23 @@ for file_idx, file in enumerate(files):
         os.makedirs(target_output_dir, exist_ok=True)
         os.makedirs(os.path.join(target_output_dir, "plots"), exist_ok=True)
         
-        # ====================================================================
         # 2. SORT BY TIME AND PREPARE DATA
-        # ====================================================================
         print(f"\n2. DATA PREPARATION ({target_name} - {window_type})")
         print("-"*80)
         
         # Sort by timestamp (critical for time series split)
         if 'timestamp' in df.columns:
             df_sorted = df.sort_values('timestamp').reset_index(drop=True)
-            print("✓ Data sorted by timestamp (chronological order)")
+            print(" Data sorted by timestamp (chronological order)")
         elif 'date' in df.columns:
             df_sorted = df.sort_values('date').reset_index(drop=True)
-            print("✓ Data sorted by date (chronological order)")
+            print(" Data sorted by date (chronological order)")
         elif 'datetime' in df.columns:
             df_sorted = df.sort_values('datetime').reset_index(drop=True)
-            print("✓ Data sorted by datetime (chronological order)")
+            print(" Data sorted by datetime (chronological order)")
         else:
             df_sorted = df.copy()
-            print("⚠ Warning: No timestamp column found. Assuming chronological order.")
+            print(" Warning: No timestamp column found. Assuming chronological order.")
         
         df_clean = df_sorted[available_features + [primary_target, 'userid']].copy()
         df_clean = df_clean.dropna(subset=[primary_target])
@@ -164,11 +157,9 @@ for file_idx, file in enumerate(files):
                 df_clean.loc[:, col] = df_clean[col].fillna(median_val)
                 print(f"  Imputed {col}: median={median_val:.2f}")
         
-        print(f"\n✓ Clean dataset: {len(df_clean)} observations from {df_clean['userid'].nunique()} users")
+        print(f"\n Clean dataset: {len(df_clean)} observations from {df_clean['userid'].nunique()} users")
         
-        # ====================================================================
         # 3. USER-BASED FEATURES (NO LEAKAGE)
-        # ====================================================================
         print(f"\n3. CREATING USER-BASED FEATURES ({target_name})")
         print("-"*80)
         print("Note: User profiles calculated WITHOUT using target variable")
@@ -219,10 +210,10 @@ for file_idx, file in enumerate(files):
             user_clusters = kmeans_users.fit_predict(X_users_scaled)
             user_profiles['user_cluster'] = user_clusters
             
-            print(f"✓ Created 3 user clusters (based on physiology, NOT {target_name.lower()})")
+            print(f" Created 3 user clusters (based on physiology, NOT {target_name.lower()})")
         else:
             user_profiles['user_cluster'] = 0
-            print("⚠ Limited features for clustering")
+            print(" Limited features for clustering")
         
         # Add to data
         df_clean = df_clean.merge(user_profiles[['userid', 'user_cluster']], 
@@ -238,11 +229,9 @@ for file_idx, file in enumerate(files):
         user_step_baseline = df_clean.groupby('userid')['daily_total_steps'].transform('mean')
         df_clean['steps_ratio'] = df_clean['daily_total_steps'] / (user_step_baseline.replace(0, 1) + 1)
         
-        print(f"✓ Added user features (NO temporal leakage)")
+        print(f" Added user features (NO temporal leakage)")
         
-        # ====================================================================
         # 4. INTERACTION FEATURES
-        # ====================================================================
         print(f"\n4. CREATING INTERACTION FEATURES ({target_name})")
         print("-"*80)
         
@@ -256,11 +245,9 @@ for file_idx, file in enumerate(files):
         else:
             df_clean['hr_var_x_exam'] = 0
         
-        print(f"✓ Added 5 interaction features")
+        print(f" Added 5 interaction features")
         
-        # ====================================================================
         # 5. FINAL FEATURE SET
-        # ====================================================================
         print(f"\n5. PREPARING FEATURE SET ({target_name})")
         print("-"*80)
         
@@ -290,11 +277,9 @@ for file_idx, file in enumerate(files):
                 lower = df_model[col].quantile(0.001)
                 df_model[col] = df_model[col].clip(lower=lower, upper=upper)
         
-        print(f"\n✓ Final dataset: {len(df_model)} observations")
+        print(f"\n Final dataset: {len(df_model)} observations")
         
-        # ====================================================================
         # 6. BINARY CLASSIFICATION SETUP
-        # ====================================================================
         print(f"\n6. BINARY CLASSIFICATION SETUP ({target_name})")
         print("-"*80)
         
@@ -313,9 +298,7 @@ for file_idx, file in enumerate(files):
         print(f"  High {target_name.lower()} (1): {(y_binary == 1).sum()} (≥{p67:.1f})")
         print(f"  Total binary:    {len(y_binary)}")
         
-        # ====================================================================
         # 7. TIME SERIES SPLIT (70-15-15)
-        # ====================================================================
         print(f"\n7. TIME SERIES SPLIT: 70% TRAIN - 15% VAL - 15% TEST ({target_name})")
         print("-"*80)
         print("Using chronological split (no shuffling) to respect temporal order")
@@ -348,13 +331,10 @@ for file_idx, file in enumerate(files):
         X_val_scaled = scaler.transform(X_val)
         X_test_scaled = scaler.transform(X_test)
         
-        print("✓ Data normalized (fit on train only)")
+        print(" Data normalized (fit on train only)")
         
-        # ====================================================================
         # 8. TRAIN MODELS
-        # ====================================================================
         print(f"\n8. TRAINING MODELS - BINARY {target_name.upper()} ({window_type})")
-        print("="*80)
         
         models = {
             'XGBoost': xgb.XGBClassifier(n_estimators=200, max_depth=6, learning_rate=0.1, 
@@ -401,9 +381,7 @@ for file_idx, file in enumerate(files):
                 'y_test_pred': y_test_pred, 'y_test_proba': y_test_proba
             }
         
-        # ====================================================================
         # 9. ENSEMBLE MODEL
-        # ====================================================================
         print(f"\n9. ENSEMBLE MODEL ({target_name})")
         print("-"*80)
         
@@ -446,11 +424,8 @@ for file_idx, file in enumerate(files):
             'y_test_pred': y_test_pred_ens, 'y_test_proba': y_test_proba_ens
         }
         
-        # ====================================================================
         # 10. GENERATE ROC CURVES
-        # ====================================================================
         print(f"\n10. GENERATING ROC CURVES ({target_name} - {window_type})")
-        print("="*80)
         
         # Define colors for different models
         model_colors = {
@@ -492,7 +467,7 @@ for file_idx, file in enumerate(files):
                        dpi=300, bbox_inches='tight')
             plt.close()
             
-            print(f"✓ Saved ROC curve for {model_name}")
+            print(f" Saved ROC curve for {model_name}")
         
         # Create comparison ROC curve (all models on one plot)
         print(f"\nGenerating comparison ROC curve with all models...")
@@ -524,11 +499,9 @@ for file_idx, file in enumerate(files):
                    dpi=300, bbox_inches='tight')
         plt.close()
         
-        print(f"✓ Saved comparison ROC curve (all models)")
+        print(f" Saved comparison ROC curve (all models)")
         
-        # ====================================================================
         # 11. VALIDATION vs TEST ROC COMPARISON
-        # ====================================================================
         print(f"\nGenerating validation vs test ROC comparison...")
         
         # Create a comparison plot for the best model showing validation and test performance
@@ -566,18 +539,15 @@ for file_idx, file in enumerate(files):
                    dpi=300, bbox_inches='tight')
         plt.close()
         
-        print(f"✓ Saved validation vs test ROC curve")
+        print(f" Saved validation vs test ROC curve")
         
-        # ====================================================================
         # 12. RESULTS & FINAL VISUALIZATIONS
-        # ====================================================================
         print(f"\n12. FINAL RESULTS ({target_name} - {window_type})")
-        print("="*80)
         
         best_name = max(results.keys(), key=lambda k: results[k]['test_f1'])
         best = results[best_name]
         
-        print(f"\n🏆 BEST MODEL: {best_name}")
+        print(f"\n BEST MODEL: {best_name}")
         print(f"   Validation F1:  {results[best_name]['val_f1']:.4f}")
         print(f"   Validation AUC: {results[best_name]['val_auc']:.4f}")
         print(f"   Test F1:        {best['test_f1']:.4f}")
@@ -588,7 +558,7 @@ for file_idx, file in enumerate(files):
         
         # Check if results are realistic
         if best['test_f1'] > 0.90:
-            print("\n⚠️  WARNING: F1 > 0.90 is suspiciously high!")
+            print("\n  WARNING: F1 > 0.90 is suspiciously high!")
             print("   Possible issues:")
             print("   • Small dataset with consistent patterns")
             print("   • Binary split too extreme (very separable classes)")
@@ -611,7 +581,7 @@ for file_idx, file in enumerate(files):
             for name, res in results.items()
         ])
         comparison_df.to_csv(os.path.join(target_output_dir, 'results_no_leakage.csv'), index=False)
-        print(f"\n✓ Saved: results_no_leakage.csv")
+        print(f"\n Saved: results_no_leakage.csv")
         
         # Confusion Matrix
         fig, ax = plt.subplots(figsize=(8, 6))
@@ -622,31 +592,25 @@ for file_idx, file in enumerate(files):
                     fontsize=12, fontweight='bold')
         plt.tight_layout()
         plt.savefig(os.path.join(target_output_dir, 'plots', 'confusion_matrix.png'), dpi=300)
-        print(f"✓ Saved: confusion_matrix.png")
+        print(f" Saved: confusion_matrix.png")
         plt.close()
         
-        # ====================================================================
         # 13. SUMMARY
-        # ====================================================================
         print(f"\n13. SUMMARY ({target_name} - {window_type})")
-        print("="*80)
         
-        print(f"\n📊 ROC Curves Generated:")
+        print(f"\n ROC Curves Generated:")
         print(f"   • Individual curves for each model (5 plots)")
         print(f"   • Comparison curve with all models (1 plot)")
         print(f"   • Validation vs Test comparison for best model (1 plot)")
         print(f"   • Total: 3 ROC curve visualizations")
         
         print("\n" + "#"*80)
-        print(f"# ✅ COMPLETE: {target_name} ({window_type})")
+        print(f"#  COMPLETE: {target_name} ({window_type})")
         print("#"*80)
 
-# ============================================================================
 # OVERALL COMPARISON
-# ============================================================================
 print("\n\n" + "="*80)
 print("OVERALL COMPARISON: STRESS vs ANXIETY (30MIN vs 60MIN)")
-print("="*80)
 
 if all_results:
     print("\n" + "-"*80)
@@ -690,15 +654,13 @@ if all_results:
     if summary_data:
         summary_df = pd.DataFrame(summary_data)
         summary_df.to_csv(os.path.join(output_dir, 'overall_summary.csv'), index=False)
-        print("\n✓ Saved: overall_summary.csv")
+        print("\n Saved: overall_summary.csv")
 
 print("\n" + "="*80)
-print("✅ COMPLETE! All windows and targets processed.")
 print("   Time Series Split: 70% Train - 15% Val - 15% Test (chronological)")
 print("   Binary Classification: Low vs High (middle tercile removed)")
 print("   User Features: NO temporal leakage")
 print("   ROC Curves: Comprehensive visualizations generated")
-print("="*80)
 print(f"\nResults saved to: {output_dir}")
 print("  - 30min_window/")
 print("    - stress/")
@@ -715,4 +677,3 @@ print("      - plots/ (same structure)")
 print("    - anxiety/")
 print("      - plots/ (same structure)")
 print("  - overall_summary.csv")
-print("="*80)

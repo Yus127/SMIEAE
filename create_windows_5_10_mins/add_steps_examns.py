@@ -146,13 +146,9 @@ def get_exam_features(date, university):
         'is_pre_exam_week': 1 if (days_to_exam is not None and 0 <= days_to_exam <= 7) else 0
     }
 
-print("="*70)
 print("ENRICHING ML DATASETS WITH STEPS AND EXAM DATA")
-print("="*70)
 
-# ==============================================================================
-# STEP 1: EXTRACT DAILY STEPS FROM FITBIT DATA
-# ==============================================================================
+# EXTRACT DAILY STEPS FROM FITBIT DATA
 
 print("\nStep 1: Extracting daily step counts from Fitbit data...")
 
@@ -198,15 +194,12 @@ for fitbit_file in fitbit_files:
     except Exception as e:
         print(f"  Error processing user {user_id}: {e}")
 
-print(f"\n✓ Extracted step data for {len(daily_steps_data)} users")
+print(f"\n Extracted step data for {len(daily_steps_data)} users")
 
-# ==============================================================================
-# STEP 2: ENRICH ML DATASETS
-# ==============================================================================
+# ENRICH ML DATASETS
 
 print("\n" + "="*70)
 print("Step 2: Enriching ML datasets...")
-print("="*70)
 
 # Find all ML-ready CSV files
 ml_files = [
@@ -281,41 +274,37 @@ for ml_file in ml_files:
         completeness = df.notna().mean()
         low_completeness_cols = completeness[completeness < 0.50].index.tolist()
         if low_completeness_cols:
-            print(f"  ✗ Dropping {len(low_completeness_cols)} columns with <50% completeness:")
+            print(f"   Dropping {len(low_completeness_cols)} columns with <50% completeness:")
             for col in low_completeness_cols:
                 print(f"      {col:40s} {completeness[col]*100:5.1f}%")
             df = df.drop(columns=low_completeness_cols)
         else:
-            print(f"  ✓ All columns have ≥50% completeness")
+            print(f"   All columns have ≥50% completeness")
 
         # Save enriched dataset
         output_file = os.path.join(output_dir, os.path.basename(ml_file).replace('.csv', '_enriched.csv'))
         df.to_csv(output_file, index=False)
         
-        print(f"  ✓ Original shape: {original_shape}")
-        print(f"  ✓ New shape: {df.shape}")
-        print(f"  ✓ Added 5 new features")
-        print(f"  ✓ Step data coverage: {df['daily_total_steps'].notna().sum()}/{len(df)} ({df['daily_total_steps'].notna().mean()*100:.1f}%)")
-        print(f"  ✓ Exam periods marked: {df['is_exam_period'].sum()} responses")
-        print(f"  ✓ Easter break marked: {df['is_easter_break'].sum()} responses")
-        print(f"  ✓ Saved: {output_file}")
+        print(f"   Original shape: {original_shape}")
+        print(f"   New shape: {df.shape}")
+        print(f"   Added 5 new features")
+        print(f"   Step data coverage: {df['daily_total_steps'].notna().sum()}/{len(df)} ({df['daily_total_steps'].notna().mean()*100:.1f}%)")
+        print(f"   Exam periods marked: {df['is_exam_period'].sum()} responses")
+        print(f"   Easter break marked: {df['is_easter_break'].sum()} responses")
+        print(f"   Saved: {output_file}")
         
         processed_count += 1
         
     except Exception as e:
-        print(f"  ✗ Error: {e}")
+        print(f"   Error: {e}")
         import traceback
         traceback.print_exc()
 
 
 
-# ==============================================================================
 # FINAL SUMMARY
-# ==============================================================================
 
 print("\n" + "="*70)
-print("✓ ENRICHMENT COMPLETE!")
-print("="*70)
 
 print(f"\nProcessed {processed_count} ML datasets")
 
