@@ -10,7 +10,7 @@ user_university_mapping = {
     **{i: 1 for i in range(36, 56)}   # University 1, Course C
 }
 
-university_1_exams = [
+university_2_exams = [
     ('2025-03-17', '2025-03-21', 'Marzo'),
     ('2025-05-12', '2025-05-16', 'Mayo'),
     ('2025-06-23', '2025-06-27', 'Junio'),
@@ -22,7 +22,7 @@ university_1_exams = [
     ('2026-01-19', '2026-01-23', 'Enero - Suficiencia')
 ]
 
-university_2_exams = [
+university_1_exams = [
     ('2025-03-17', '2025-03-22', 'Marzo'),
     ('2025-05-05', '2025-05-10', 'Mayo'),
     ('2025-06-09', '2025-06-14', 'Junio')
