@@ -23,7 +23,7 @@ import os
 
 # PATHS
 INPUT_PATH = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/data_with_exam_features.csv'
-OUTPUT_DIR = '/Users/YusMolina/Downloads/smieae/results/whole_dataset/random_split/model_comparison/'
+OUTPUT_DIR = '/Users/YusMolina/Downloads/smieae/results/whole_dataset/random_split/model1/'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 print("MULTI-MODEL COMPARISON: STRESS & ANXIETY PREDICTION")
@@ -141,8 +141,10 @@ for model_name, model_template in models.items():
         'test_proba': stress_model.predict_proba(X_test_s)
     }
     
-    # Anxiety model
+    # Anxiety model (class_weight='balanced' for imbalanced anxiety classes)
     anxiety_model = clone(model_template)
+    if model_name in ('Logistic Regression', 'Random Forest', 'SVM (RBF)'):
+        anxiety_model.set_params(class_weight='balanced')
     anxiety_model.fit(X_train_a, y_train_a)
     
     anxiety_results[model_name] = {

@@ -337,14 +337,20 @@ for file_idx, file in enumerate(files):
         print(f"\n8. TRAINING MODELS - BINARY {target_name.upper()} ({window_type})")
         
         models = {
-            'XGBoost': xgb.XGBClassifier(n_estimators=200, max_depth=6, learning_rate=0.1, 
+            'XGBoost': xgb.XGBClassifier(n_estimators=200, max_depth=6, learning_rate=0.1,
                                           random_state=42, objective='binary:logistic'),
-            'Random Forest': RandomForestClassifier(n_estimators=200, max_depth=12, 
+            'Random Forest': RandomForestClassifier(n_estimators=200, max_depth=12,
                                                    random_state=42),
             'Logistic Regression': LogisticRegression(random_state=42, max_iter=1000, C=0.1),
             'SVM': SVC(kernel='rbf', probability=True, random_state=42, C=1.0)
         }
-        
+
+        # Apply class_weight='balanced' for anxiety (imbalanced classes)
+        if target_name == 'Anxiety':
+            models['Logistic Regression'].set_params(class_weight='balanced')
+            models['Random Forest'].set_params(class_weight='balanced')
+            models['SVM'].set_params(class_weight='balanced')
+
         results = {}
         
         for name, model in models.items():

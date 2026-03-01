@@ -178,8 +178,10 @@ for model_name, model_template in models.items():
         'test_proba': stress_model.predict_proba(X_test_s)
     }
     
-    # Anxiety model
+    # Anxiety model (class_weight='balanced' for imbalanced anxiety classes)
     anxiety_model = clone(model_template)
+    if model_name in ('Logistic Regression', 'Random Forest', 'SVM (RBF)'):
+        anxiety_model.set_params(class_weight='balanced')
     anxiety_model.fit(X_train_a, y_train_a)
     
     anxiety_results[model_name] = {

@@ -259,11 +259,17 @@ for file_idx, file in enumerate(files):
         models = {
             'Logistic Regression': LogisticRegression(random_state=42, max_iter=1000, multi_class='multinomial'),
             'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42, max_depth=10),
-            'XGBoost': xgb.XGBClassifier(random_state=42, n_estimators=100, max_depth=6, 
+            'XGBoost': xgb.XGBClassifier(random_state=42, n_estimators=100, max_depth=6,
                                          learning_rate=0.1, objective='multi:softmax', num_class=3),
             'SVM': SVC(kernel='rbf', probability=True, random_state=42, decision_function_shape='ovr'),
             'Naive Bayes': GaussianNB()
         }
+
+        # Apply class_weight='balanced' for anxiety (imbalanced classes)
+        if target_name == 'Anxiety':
+            models['Logistic Regression'].set_params(class_weight='balanced')
+            models['Random Forest'].set_params(class_weight='balanced')
+            models['SVM'].set_params(class_weight='balanced')
         
         results = {}
         

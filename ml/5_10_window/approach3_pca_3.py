@@ -407,10 +407,16 @@ for file_idx, file in enumerate(files):
                                                    random_state=42),
             'Logistic Regression': LogisticRegression(random_state=42, max_iter=1000, 
                                                       multi_class='multinomial'),
-            'SVM': SVC(kernel='rbf', probability=True, random_state=42, 
+            'SVM': SVC(kernel='rbf', probability=True, random_state=42,
                        decision_function_shape='ovr')
         }
-        
+
+        # Apply class_weight='balanced' for anxiety (imbalanced classes)
+        if target_name == 'Anxiety':
+            models['Logistic Regression'].set_params(class_weight='balanced')
+            models['Random Forest'].set_params(class_weight='balanced')
+            models['SVM'].set_params(class_weight='balanced')
+
         results = {}
         
         for name, model in models.items():

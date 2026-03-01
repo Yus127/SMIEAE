@@ -233,7 +233,13 @@ def train_evaluate_models(X_train, X_val, X_test, y_train, y_val, y_test, target
             probability=True
         )
     }
-    
+
+    # Apply class_weight='balanced' for anxiety (imbalanced classes)
+    if target_name == 'ANXIETY':
+        models['Logistic Regression'].set_params(class_weight='balanced')
+        models['Random Forest'].set_params(class_weight='balanced')
+        models['SVM (RBF)'].set_params(class_weight='balanced')
+
     results = {}
     trained_models = {}
     
