@@ -23,6 +23,17 @@ warnings.filterwarnings('ignore')
 sns.set_style("whitegrid")
 plt.rcParams['figure.figsize'] = (15, 10)
 
+def cohen_d(group1, group2):
+    """Compute Cohen's d effect size between two groups."""
+    n1, n2 = len(group1), len(group2)
+    if n1 < 2 or n2 < 2:
+        return np.nan
+    pooled_std = np.sqrt(((n1 - 1) * group1.std(ddof=1)**2 + (n2 - 1) * group2.std(ddof=1)**2) / (n1 + n2 - 2))
+    if pooled_std == 0:
+        return np.nan
+    return (group1.mean() - group2.mean()) / pooled_std
+
+
 class StressAnxietyOCSVM:
     """
     One-Class SVM model for detecting anomalies in stress and anxiety patterns
@@ -166,22 +177,26 @@ class StressAnxietyOCSVM:
         
         # Analyze stress and anxiety in anomalies
         if self.stress_col and self.stress_col in results_df.columns:
-            stress_normal = results_df[results_df['anomaly']==1][self.stress_col].mean()
-            stress_anomaly = results_df[results_df['anomaly']==-1][self.stress_col].mean()
-            if not np.isnan(stress_normal) and not np.isnan(stress_anomaly):
+            s_normal = results_df[results_df['anomaly']==1][self.stress_col].dropna()
+            s_anomaly = results_df[results_df['anomaly']==-1][self.stress_col].dropna()
+            if len(s_normal) > 0 and len(s_anomaly) > 0:
+                d_stress = cohen_d(s_normal, s_anomaly)
                 print(f"\n{'-'*80}")
                 print("STRESS LEVELS:")
-                print(f"Normal samples - Mean stress: {stress_normal:.2f}")
-                print(f"Anomalies - Mean stress: {stress_anomaly:.2f}")
-            
+                print(f"Normal samples - Mean stress: {s_normal.mean():.2f}")
+                print(f"Anomalies - Mean stress: {s_anomaly.mean():.2f}")
+                print(f"Cohen's d (stress): {d_stress:.4f}")
+
         if self.anxiety_col and self.anxiety_col in results_df.columns:
-            anxiety_normal = results_df[results_df['anomaly']==1][self.anxiety_col].mean()
-            anxiety_anomaly = results_df[results_df['anomaly']==-1][self.anxiety_col].mean()
-            if not np.isnan(anxiety_normal) and not np.isnan(anxiety_anomaly):
+            a_normal = results_df[results_df['anomaly']==1][self.anxiety_col].dropna()
+            a_anomaly = results_df[results_df['anomaly']==-1][self.anxiety_col].dropna()
+            if len(a_normal) > 0 and len(a_anomaly) > 0:
+                d_anxiety = cohen_d(a_normal, a_anomaly)
                 print(f"\n{'-'*80}")
                 print("ANXIETY LEVELS:")
-                print(f"Normal samples - Mean anxiety: {anxiety_normal:.2f}")
-                print(f"Anomalies - Mean anxiety: {anxiety_anomaly:.2f}")
+                print(f"Normal samples - Mean anxiety: {a_normal.mean():.2f}")
+                print(f"Anomalies - Mean anxiety: {a_anomaly.mean():.2f}")
+                print(f"Cohen's d (anxiety): {d_anxiety:.4f}")
         
         return results_df
     
@@ -504,30 +519,28 @@ def main():
         
         # Check if stress column exists and has valid data
         if 'q_i_stress_sliderNeutralPos' in results_df.columns:
-            normal_stress_vals = results_df[results_df['anomaly']==1]['q_i_stress_sliderNeutralPos'].dropna()
-            anomaly_stress_vals = results_df[results_df['anomaly']==-1]['q_i_stress_sliderNeutralPos'].dropna()
-            
-            if len(normal_stress_vals) > 0 and len(anomaly_stress_vals) > 0:
-                normal_stress = normal_stress_vals.mean()
-                anomaly_stress = anomaly_stress_vals.mean()
+            s_normal = results_df[results_df['anomaly']==1]['q_i_stress_sliderNeutralPos'].dropna()
+            s_anomaly = results_df[results_df['anomaly']==-1]['q_i_stress_sliderNeutralPos'].dropna()
+            if len(s_normal) > 0 and len(s_anomaly) > 0:
+                normal_stress, anomaly_stress = s_normal.mean(), s_anomaly.mean()
+                d_stress = cohen_d(s_normal, s_anomaly)
             else:
-                normal_stress = anomaly_stress = np.nan
+                normal_stress = anomaly_stress = d_stress = np.nan
         else:
-            normal_stress = anomaly_stress = np.nan
-            
+            normal_stress = anomaly_stress = d_stress = np.nan
+
         # Check if anxiety column exists and has valid data
         if 'q_i_anxiety_sliderNeutralPos' in results_df.columns:
-            normal_anxiety_vals = results_df[results_df['anomaly']==1]['q_i_anxiety_sliderNeutralPos'].dropna()
-            anomaly_anxiety_vals = results_df[results_df['anomaly']==-1]['q_i_anxiety_sliderNeutralPos'].dropna()
-            
-            if len(normal_anxiety_vals) > 0 and len(anomaly_anxiety_vals) > 0:
-                normal_anxiety = normal_anxiety_vals.mean()
-                anomaly_anxiety = anomaly_anxiety_vals.mean()
+            a_normal = results_df[results_df['anomaly']==1]['q_i_anxiety_sliderNeutralPos'].dropna()
+            a_anomaly = results_df[results_df['anomaly']==-1]['q_i_anxiety_sliderNeutralPos'].dropna()
+            if len(a_normal) > 0 and len(a_anomaly) > 0:
+                normal_anxiety, anomaly_anxiety = a_normal.mean(), a_anomaly.mean()
+                d_anxiety = cohen_d(a_normal, a_anomaly)
             else:
-                normal_anxiety = anomaly_anxiety = np.nan
+                normal_anxiety = anomaly_anxiety = d_anxiety = np.nan
         else:
-            normal_anxiety = anomaly_anxiety = np.nan
-        
+            normal_anxiety = anomaly_anxiety = d_anxiety = np.nan
+
         summary_data.append({
             'Window': window_name,
             'Total Samples': n_total,
@@ -535,8 +548,10 @@ def main():
             'Anomaly Rate (%)': f"{anomaly_rate:.2f}",
             'Normal Stress': f"{normal_stress:.2f}" if not np.isnan(normal_stress) else 'N/A',
             'Anomaly Stress': f"{anomaly_stress:.2f}" if not np.isnan(anomaly_stress) else 'N/A',
+            "Cohen's d Stress": f"{d_stress:.4f}" if not np.isnan(d_stress) else 'N/A',
             'Normal Anxiety': f"{normal_anxiety:.2f}" if not np.isnan(normal_anxiety) else 'N/A',
-            'Anomaly Anxiety': f"{anomaly_anxiety:.2f}" if not np.isnan(anomaly_anxiety) else 'N/A'
+            'Anomaly Anxiety': f"{anomaly_anxiety:.2f}" if not np.isnan(anomaly_anxiety) else 'N/A',
+            "Cohen's d Anxiety": f"{d_anxiety:.4f}" if not np.isnan(d_anxiety) else 'N/A',
         })
     
     summary_df = pd.DataFrame(summary_data)
