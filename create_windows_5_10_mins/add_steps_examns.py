@@ -69,8 +69,8 @@ user_courses = {
     55: {'university': 1, 'course': 'C'}
 }
 
-# Exam periods for University 1 (2025)
-exam_periods_uni1 = [
+# Exam periods for University 2 (2025)
+exam_periods_uni2 = [
     ('2025-03-17', '2025-03-21'),  # March
     ('2025-05-12', '2025-05-16'),  # May
     ('2025-06-23', '2025-06-27'),  # June
@@ -82,8 +82,8 @@ exam_periods_uni1 = [
     ('2026-01-19', '2026-01-23'),  # January (Suficiencia)
 ]
 
-# Exam periods for University 2 (2025)
-exam_periods_uni2 = [
+# Exam periods for University 1 (2025)
+exam_periods_uni1 = [
     ('2025-03-17', '2025-03-22'),  # March
     ('2025-05-05', '2025-05-10'),  # May
     ('2025-06-09', '2025-06-14'),  # June
