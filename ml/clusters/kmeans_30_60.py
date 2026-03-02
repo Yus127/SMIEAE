@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore')
 plt.style.use('seaborn-v0_8-darkgrid')
 sns.set_palette("husl")
 
-print("USER CLUSTERING ANALYSIS - 3 CLUSTERS")
+print("USER CLUSTERING ANALYSIS - 2 CLUSTERS")
 print("PHYSIOLOGICAL & CONTEXTUAL FEATURES (NO TARGET LEAKAGE)")
 print("SEPARATE ANALYSIS FOR 30MIN AND 60MIN WINDOWS")
 
@@ -234,7 +234,7 @@ for window_type in window_types:
     
     # Inertia (within-cluster sum of squares)
     axes[0].plot(k_range, inertias, 'bo-', linewidth=2, markersize=8)
-    axes[0].axvline(x=3, color='r', linestyle='--', linewidth=2, label='k=3 (chosen)')
+    axes[0].axvline(x=2, color='r', linestyle='--', linewidth=2, label='k=2 (chosen)')
     axes[0].set_xlabel('Number of Clusters (k)', fontsize=12)
     axes[0].set_ylabel('Inertia (Within-Cluster Sum of Squares)', fontsize=12)
     axes[0].set_title('Elbow Method - Inertia', fontsize=13, fontweight='bold')
@@ -243,7 +243,7 @@ for window_type in window_types:
     
     # Silhouette score
     axes[1].plot(k_range, silhouette_scores, 'go-', linewidth=2, markersize=8)
-    axes[1].axvline(x=3, color='r', linestyle='--', linewidth=2, label='k=3 (chosen)')
+    axes[1].axvline(x=2, color='r', linestyle='--', linewidth=2, label='k=2 (chosen)')
     axes[1].set_xlabel('Number of Clusters (k)', fontsize=12)
     axes[1].set_ylabel('Silhouette Score', fontsize=12)
     axes[1].set_title('Silhouette Score Analysis', fontsize=13, fontweight='bold')
@@ -256,11 +256,11 @@ for window_type in window_types:
     print(f"\n Saved: elbow_method.png")
     plt.close()
     
-    # 6. PERFORM CLUSTERING WITH K=3
-    print(f"\n6. K-MEANS CLUSTERING (k=3) ({window_type})")
+    # 6. PERFORM CLUSTERING WITH K=2
+    print(f"\n6. K-MEANS CLUSTERING (k=2) ({window_type})")
     print("-"*80)
     
-    kmeans_users = KMeans(n_clusters=3, random_state=42, n_init=20)
+    kmeans_users = KMeans(n_clusters=2, random_state=42, n_init=20)
     user_clusters = kmeans_users.fit_predict(X_users_scaled)
     user_profiles['user_cluster'] = user_clusters
     
@@ -269,14 +269,14 @@ for window_type in window_types:
     davies_bouldin = davies_bouldin_score(X_users_scaled, user_clusters)
     calinski_harabasz = calinski_harabasz_score(X_users_scaled, user_clusters)
     
-    print(f"\n Clustering completed with 3 clusters")
+    print(f"\n Clustering completed with 2 clusters")
     print(f"\nClustering Quality Metrics:")
     print(f"  Silhouette Score:        {silhouette:.4f} (higher is better, range: -1 to 1)")
     print(f"  Davies-Bouldin Index:    {davies_bouldin:.4f} (lower is better)")
     print(f"  Calinski-Harabasz Score: {calinski_harabasz:.2f} (higher is better)")
-    
+
     print(f"\nCluster Sizes:")
-    for cluster_id in range(3):
+    for cluster_id in range(2):
         n = (user_clusters == cluster_id).sum()
         pct = n / len(user_clusters) * 100
         print(f"  Cluster {cluster_id}: {n:3d} users ({pct:5.1f}%)")
@@ -288,10 +288,10 @@ for window_type in window_types:
     # Calculate cluster centroids in original (unnormalized) space
     cluster_profiles = []
     
-    for cluster_id in range(3):
+    for cluster_id in range(2):
         cluster_mask = user_profiles['user_cluster'] == cluster_id
         cluster_data = user_profiles[cluster_mask]
-        
+
         profile = {'cluster': cluster_id, 'n_users': cluster_mask.sum()}
         
         for feat in user_feature_cols:
@@ -357,10 +357,10 @@ for window_type in window_types:
     # 9.1. PCA Scatter Plot (2D)
     fig, ax = plt.subplots(figsize=(12, 8))
     
-    for cluster_id in range(3):
+    for cluster_id in range(2):
         cluster_mask = user_profiles['user_cluster'] == cluster_id
         cluster_data = user_profiles[cluster_mask]
-        
+
         ax.scatter(cluster_data['pca_1'], cluster_data['pca_2'],
                   c=cluster_colors[cluster_id], label=f'Cluster {cluster_id} (n={cluster_mask.sum()})',
                   s=100, alpha=0.6, edgecolors='black', linewidth=0.5)
@@ -373,7 +373,7 @@ for window_type in window_types:
     
     ax.set_xlabel(f'PC1 ({variance_explained[0]*100:.1f}% variance)', fontsize=13)
     ax.set_ylabel(f'PC2 ({variance_explained[1]*100:.1f}% variance)', fontsize=13)
-    ax.set_title(f'User Clusters - PCA Visualization\n{window_type} window (3 clusters, {len(user_profiles)} users)',
+    ax.set_title(f'User Clusters - PCA Visualization\n{window_type} window (2 clusters, {len(user_profiles)} users)',
                 fontsize=14, fontweight='bold')
     ax.legend(loc='best', fontsize=10)
     ax.grid(True, alpha=0.3)
@@ -385,7 +385,7 @@ for window_type in window_types:
     
     # 9.2. Feature Distribution by Cluster
     n_features = len(user_feature_cols)
-    n_cols = 3
+    n_cols = 2
     n_rows = (n_features + n_cols - 1) // n_cols
     
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 4*n_rows))
@@ -396,7 +396,7 @@ for window_type in window_types:
         
         cluster_data_list = []
         cluster_labels = []
-        for cluster_id in range(3):
+        for cluster_id in range(2):
             cluster_mask = user_profiles['user_cluster'] == cluster_id
             cluster_data_list.append(user_profiles[cluster_mask][feat].values)
             cluster_labels.append(f'C{cluster_id}')
@@ -428,7 +428,7 @@ for window_type in window_types:
     # 9.3. Cluster Heatmap (Normalized Feature Means)
     # Create heatmap data
     heatmap_data = []
-    for cluster_id in range(3):
+    for cluster_id in range(2):
         cluster_mask = user_profiles['user_cluster'] == cluster_id
         cluster_means = []
         for feat in user_feature_cols:
@@ -437,7 +437,7 @@ for window_type in window_types:
     
     heatmap_df = pd.DataFrame(heatmap_data, 
                              columns=[f.replace('_', ' ').title() for f in user_feature_cols],
-                             index=[f'Cluster {i}' for i in range(3)])
+                             index=[f'Cluster {i}' for i in range(2)])
     
     # Normalize for better visualization
     heatmap_df_norm = (heatmap_df - heatmap_df.mean()) / heatmap_df.std()
@@ -472,7 +472,7 @@ for window_type in window_types:
             
             cluster_data_list = []
             cluster_labels = []
-            for cluster_id in range(3):
+            for cluster_id in range(2):
                 cluster_mask = user_profiles['user_cluster'] == cluster_id
                 cluster_data_list.append(user_profiles[cluster_mask][target_col].dropna().values)
                 cluster_labels.append(f'C{cluster_id}')
@@ -501,8 +501,8 @@ for window_type in window_types:
     # 9.5. Cluster Size Pie Chart
     fig, ax = plt.subplots(figsize=(10, 8))
     
-    cluster_sizes = [np.sum(user_clusters == i) for i in range(3)]
-    cluster_labels = [f'Cluster {i}\n({cluster_sizes[i]} users)' for i in range(3)]
+    cluster_sizes = [np.sum(user_clusters == i) for i in range(2)]
+    cluster_labels = [f'Cluster {i}\n({cluster_sizes[i]} users)' for i in range(2)]
     
     wedges, texts, autotexts = ax.pie(cluster_sizes, labels=cluster_labels, colors=cluster_colors,
                                        autopct='%1.1f%%', startangle=90, textprops={'fontsize': 11})
@@ -533,7 +533,7 @@ for window_type in window_types:
         fig = plt.figure(figsize=(14, 10))
         ax = fig.add_subplot(111, projection='3d')
         
-        for cluster_id in range(3):
+        for cluster_id in range(2):
             cluster_mask = user_clusters == cluster_id
             ax.scatter(X_pca_3d[cluster_mask, 0],
                       X_pca_3d[cluster_mask, 1],
@@ -576,7 +576,7 @@ for window_type in window_types:
     # Store results
     all_clustering_results[window_type] = {
         'n_users': len(user_profiles),
-        'n_clusters': 3,
+        'n_clusters': 2,
         'silhouette_score': silhouette,
         'davies_bouldin_index': davies_bouldin,
         'calinski_harabasz_score': calinski_harabasz,
