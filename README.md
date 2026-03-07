@@ -6,8 +6,8 @@ Stress Monitoring in Educational Academic Environments — a data pipeline for p
 
 This project collects and processes multi-modal data from university students across two institutions and multiple courses:
 
-- **University 1**: Courses A1 (users 1-10), A2 (users 11-20), C (users 36-55)
-- **University 2**: Course B (users 21-35)
+- **University 1**: Course B (users 21-35)
+- **University 2**: Courses A1 (users 1-10), A2 (users 11-20), C (users 36-55)
 
 Data sources include:
 - **Fitbit wearables**: heart rate, HRV, SpO2, respiratory rate, sleep stages, activity levels, steps

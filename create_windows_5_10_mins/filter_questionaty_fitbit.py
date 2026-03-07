@@ -9,7 +9,7 @@ warnings.filterwarnings('ignore', category=pd.errors.DtypeWarning)
 
 fitbit_dir = "/Users/YusMolina/Downloads/smieae/data/original_data/fitbit/consolidated_output"
 questionnaire_path = "/Users/YusMolina/Downloads/smieae/data/data_clean/daily_questions_cleaned.csv"
-output_dir = "/Users/YusMolina/Downloads/smieae/data/processed/5_10min"
+output_dir = "/Users/YusMolina/Downloads/smieae/data/processed"
 
 os.makedirs(output_dir, exist_ok=True)
 

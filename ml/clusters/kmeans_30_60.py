@@ -13,12 +13,16 @@ warnings.filterwarnings('ignore')
 plt.style.use('seaborn-v0_8-darkgrid')
 sns.set_palette("husl")
 
-print("USER CLUSTERING ANALYSIS - 2 CLUSTERS")
+print("USER CLUSTERING ANALYSIS - 7/5 CLUSTERS (30min/60min)")
 print("PHYSIOLOGICAL & CONTEXTUAL FEATURES (NO TARGET LEAKAGE)")
 print("SEPARATE ANALYSIS FOR 30MIN AND 60MIN WINDOWS")
 
 # Paths
-INPUT_PATH = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/data_with_exam_features.csv'
+ml_dir = '/Users/YusMolina/Downloads/smieae/data/ml_ready'
+data_files = {
+    '30min': f"{ml_dir}/enriched/ml_ready_30min_window_enriched.csv",
+    '60min': f"{ml_dir}/enriched/ml_ready_60min_window_enriched.csv",
+}
 output_dir = "/Users/YusMolina/Downloads/smieae/results/clustering_analysis"
 import os
 os.makedirs(output_dir, exist_ok=True)
@@ -29,39 +33,31 @@ window_types = ['30min', '60min']
 # Store results
 all_clustering_results = {}
 
-# Load the main dataset once
-print(f"\n{'='*80}")
-print(f"LOADING MAIN DATASET")
-print(f"{'='*80}")
-print(f"Path: {INPUT_PATH}")
-
-if not os.path.exists(INPUT_PATH):
-    print(f" File not found: {INPUT_PATH}")
-    exit(1)
-
-df_main = pd.read_csv(INPUT_PATH)
-print(f" Loaded {len(df_main)} observations")
-print(f" Columns: {df_main.shape[1]}")
-
 # Process each window type
 for window_type in window_types:
     window_prefix = "w30" if window_type == "30min" else "w60"
-    
+
     print("\n" + "="*80)
     print(f"PROCESSING: {window_type.upper()} WINDOW")
-    
+
     # Create window-specific output directory
     window_output_dir = os.path.join(output_dir, f"{window_type}_window")
     os.makedirs(window_output_dir, exist_ok=True)
     os.makedirs(os.path.join(window_output_dir, "plots"), exist_ok=True)
-    
+
     # 1. LOAD DATA
-    print(f"\n1. USING DATA FOR {window_type} WINDOW")
+    print(f"\n1. LOADING DATA FOR {window_type} WINDOW")
     print("-"*80)
-    
-    # Use the already loaded main dataset
-    df = df_main.copy()
-    print(f" Using {len(df)} observations from main dataset")
+
+    data_file = data_files[window_type]
+    print(f"Path: {data_file}")
+    if not os.path.exists(data_file):
+        print(f" File not found: {data_file}")
+        continue
+
+    df = pd.read_csv(data_file)
+    print(f" Loaded {len(df)} observations")
+    print(f" Columns: {df.shape[1]}")
     
     # Define features
     feature_columns = [
@@ -256,11 +252,12 @@ for window_type in window_types:
     print(f"\n Saved: elbow_method.png")
     plt.close()
     
-    # 6. PERFORM CLUSTERING WITH K=2
-    print(f"\n6. K-MEANS CLUSTERING (k=2) ({window_type})")
+    # 6. PERFORM CLUSTERING
+    n_clusters = 7 if window_type == "30min" else 5
+    print(f"\n6. K-MEANS CLUSTERING (k={n_clusters}) ({window_type})")
     print("-"*80)
-    
-    kmeans_users = KMeans(n_clusters=2, random_state=42, n_init=20)
+
+    kmeans_users = KMeans(n_clusters=n_clusters, random_state=42, n_init=20)
     user_clusters = kmeans_users.fit_predict(X_users_scaled)
     user_profiles['user_cluster'] = user_clusters
     
@@ -269,7 +266,7 @@ for window_type in window_types:
     davies_bouldin = davies_bouldin_score(X_users_scaled, user_clusters)
     calinski_harabasz = calinski_harabasz_score(X_users_scaled, user_clusters)
     
-    print(f"\n Clustering completed with 2 clusters")
+    print(f"\n Clustering completed with {n_clusters} clusters")
     print(f"\nClustering Quality Metrics:")
     print(f"  Silhouette Score:        {silhouette:.4f} (higher is better, range: -1 to 1)")
     print(f"  Davies-Bouldin Index:    {davies_bouldin:.4f} (lower is better)")
@@ -576,7 +573,7 @@ for window_type in window_types:
     # Store results
     all_clustering_results[window_type] = {
         'n_users': len(user_profiles),
-        'n_clusters': 2,
+        'n_clusters': n_clusters,
         'silhouette_score': silhouette,
         'davies_bouldin_index': davies_bouldin,
         'calinski_harabasz_score': calinski_harabasz,

@@ -17,7 +17,6 @@ warnings.filterwarnings('ignore')
 print("ADVANCED ML: TEMPORAL FEATURES + BINARY CLASSIFICATION")
 
 # Paths
-ml_dir = "/Users/YusMolina/Downloads/smieae/data/ml_ready/enriched"
 output_dir = "/Users/YusMolina/Downloads/smieae/results/advanced_ml_final"
 import os
 os.makedirs(output_dir, exist_ok=True)
@@ -27,7 +26,7 @@ os.makedirs(os.path.join(output_dir, "plots"), exist_ok=True)
 print("\n1. LOADING DATA & DETECTING STRUCTURE")
 print("-"*80)
 
-data_file = f"{ml_dir}/ml_ready_combined_windows_enriched.csv"
+data_file = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/data_with_exam_features.csv'
 df = pd.read_csv(data_file)
 print(f" Loaded {len(df)} observations")
 print(f"  Columns: {len(df.columns)}")
@@ -39,22 +38,19 @@ print(f"\n  Potential ordering columns: {time_candidates[:5]}")
 
 # Features
 feature_columns = [
-    'is_exam_period', 'days_until_exam', 'is_pre_exam_week', 'is_easter_break',
+    'is_exam_period', 'days_to_next_exam',
     'daily_total_steps',
-    'w30_heart_rate_activity_beats per minute_mean',
-    'w30_heart_rate_activity_beats per minute_std',
-    'w30_heart_rate_activity_beats per minute_min',
-    'w30_heart_rate_activity_beats per minute_max',
-    'w30_heart_rate_activity_beats per minute_median',
-    'w60_heart_rate_activity_beats per minute_mean',
-    'w60_heart_rate_activity_beats per minute_std',
-    'w60_heart_rate_activity_beats per minute_min',
-    'w60_heart_rate_activity_beats per minute_max',
-    'w60_heart_rate_activity_beats per minute_median',
+    'heart_rate_activity_beats per minute_mean',
+    'heart_rate_activity_beats per minute_std',
+    'heart_rate_activity_beats per minute_min',
+    'heart_rate_activity_beats per minute_max',
+    'daily_hrv_summary_rmssd',
+    'daily_respiratory_rate_daily_respiratory_rate',
+    'daily_spo2_average_value',
 ]
 
 available_features = [col for col in feature_columns if col in df.columns]
-primary_target = 'q_i_stress_sliderNeutralPos'
+primary_target = 'stress_level'
 
 # Check for userid
 if 'userid' not in df.columns:
@@ -100,8 +96,8 @@ print("-"*80)
 # User profiles
 user_profiles = df_clean.groupby('userid').agg({
     primary_target: ['mean', 'std', 'min', 'max'],
-    'w30_heart_rate_activity_beats per minute_mean': 'mean',
-    'w30_heart_rate_activity_beats per minute_std': 'mean',
+    'heart_rate_activity_beats per minute_mean': 'mean',
+    'heart_rate_activity_beats per minute_std': 'mean',
     'daily_total_steps': 'mean',
     'is_exam_period': 'mean'
 }).reset_index()
@@ -125,8 +121,8 @@ print(f" Created 7 user clusters")
 df_clean = df_clean.merge(user_profiles[['userid', 'user_cluster']], on='userid', how='left')
 
 # User baseline deviations
-user_hr_baseline = df_clean.groupby('userid')['w30_heart_rate_activity_beats per minute_mean'].transform('mean')
-df_clean['hr_deviation'] = df_clean['w30_heart_rate_activity_beats per minute_mean'] - user_hr_baseline
+user_hr_baseline = df_clean.groupby('userid')['heart_rate_activity_beats per minute_mean'].transform('mean')
+df_clean['hr_deviation'] = df_clean['heart_rate_activity_beats per minute_mean'] - user_hr_baseline
 
 user_step_baseline = df_clean.groupby('userid')['daily_total_steps'].transform('mean')
 df_clean['steps_ratio'] = df_clean['daily_total_steps'] / (user_step_baseline + 1)
@@ -151,7 +147,7 @@ df_clean['stress_rolling_std'] = df_clean.groupby('userid')[primary_target].tran
 
 # Changes
 df_clean['stress_change'] = df_clean.groupby('userid')[primary_target].diff()
-df_clean['hr_change'] = df_clean.groupby('userid')['w30_heart_rate_activity_beats per minute_mean'].diff()
+df_clean['hr_change'] = df_clean.groupby('userid')['heart_rate_activity_beats per minute_mean'].diff()
 
 # Position in sequence
 df_clean['seq_position'] = df_clean.groupby('userid').cumcount()
@@ -164,7 +160,7 @@ print("-"*80)
 
 df_clean['cluster_x_exam'] = df_clean['user_cluster'] * df_clean['is_exam_period']
 df_clean['hr_dev_x_exam'] = df_clean['hr_deviation'] * df_clean['is_exam_period']
-df_clean['steps_x_exam_prox'] = df_clean['steps_ratio'] * (1 / (df_clean['days_until_exam'] + 1))
+df_clean['steps_x_exam_prox'] = df_clean['steps_ratio'] * (1 / (df_clean['days_to_next_exam'] + 1))
 
 print(f" Added 3 interaction features")
 

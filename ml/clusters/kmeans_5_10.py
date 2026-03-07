@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore')
 plt.style.use('seaborn-v0_8-darkgrid')
 sns.set_palette("husl")
 
-print("USER CLUSTERING ANALYSIS - 5 CLUSTERS")
+print("USER CLUSTERING ANALYSIS - 3 CLUSTERS")
 print("PHYSIOLOGICAL & CONTEXTUAL FEATURES (NO TARGET LEAKAGE)")
 print("SEPARATE ANALYSIS FOR 5MIN AND 10MIN WINDOWS")
 
@@ -250,11 +250,11 @@ for file_idx, file in enumerate(files):
     print(f"\n Saved: elbow_method.png")
     plt.close()
     
-    # 6. PERFORM CLUSTERING WITH K=5
-    print(f"\n6. K-MEANS CLUSTERING (k=5) ({window_type})")
+    # 6. PERFORM CLUSTERING WITH K=3
+    print(f"\n6. K-MEANS CLUSTERING (k=3) ({window_type})")
     print("-"*80)
-    
-    kmeans_users = KMeans(n_clusters=5, random_state=42, n_init=20)
+
+    kmeans_users = KMeans(n_clusters=3, random_state=42, n_init=20)
     user_clusters = kmeans_users.fit_predict(X_users_scaled)
     user_profiles['user_cluster'] = user_clusters
     
@@ -263,7 +263,7 @@ for file_idx, file in enumerate(files):
     davies_bouldin = davies_bouldin_score(X_users_scaled, user_clusters)
     calinski_harabasz = calinski_harabasz_score(X_users_scaled, user_clusters)
     
-    print(f"\n Clustering completed with 5 clusters")
+    print(f"\n Clustering completed with 3 clusters")
     print(f"\nClustering Quality Metrics:")
     print(f"  Silhouette Score:        {silhouette:.4f} (higher is better, range: -1 to 1)")
     print(f"  Davies-Bouldin Index:    {davies_bouldin:.4f} (lower is better)")
@@ -570,7 +570,7 @@ for file_idx, file in enumerate(files):
     # Store results
     all_clustering_results[window_type] = {
         'n_users': len(user_profiles),
-        'n_clusters': 5,
+        'n_clusters': 3,
         'silhouette_score': silhouette,
         'davies_bouldin_index': davies_bouldin,
         'calinski_harabasz_score': calinski_harabasz,

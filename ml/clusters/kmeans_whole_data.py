@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore')
 plt.style.use('seaborn-v0_8-darkgrid')
 sns.set_palette("husl")
 
-print("USER CLUSTERING ANALYSIS - 2 CLUSTERS")
+print("USER CLUSTERING ANALYSIS - 4 CLUSTERS")
 print("PHYSIOLOGICAL & CONTEXTUAL FEATURES (NO TARGET LEAKAGE)")
 print("ANALYSIS OF JOINED DATASET")
 
@@ -278,11 +278,11 @@ plt.savefig(os.path.join(output_dir, 'plots', 'elbow_method.png'), dpi=300, bbox
 print(f"\n Saved: elbow_method.png")
 plt.close()
 
-# 7. PERFORM CLUSTERING WITH K=2
-print(f"\n7. K-MEANS CLUSTERING (k=2)")
+# 7. PERFORM CLUSTERING WITH K=4
+print(f"\n7. K-MEANS CLUSTERING (k=4)")
 print("-"*80)
 
-kmeans_users = KMeans(n_clusters=2, random_state=42, n_init=20)
+kmeans_users = KMeans(n_clusters=4, random_state=42, n_init=20)
 user_clusters = kmeans_users.fit_predict(X_users_scaled)
 user_profiles['user_cluster'] = user_clusters
 
@@ -291,7 +291,7 @@ silhouette = silhouette_score(X_users_scaled, user_clusters)
 davies_bouldin = davies_bouldin_score(X_users_scaled, user_clusters)
 calinski_harabasz = calinski_harabasz_score(X_users_scaled, user_clusters)
 
-print(f"\n Clustering completed with 2 clusters")
+print(f"\n Clustering completed with 4 clusters")
 print(f"\nClustering Quality Metrics:")
 print(f"  Silhouette Score:        {silhouette:.4f} (higher is better, range: -1 to 1)")
 print(f"  Davies-Bouldin Index:    {davies_bouldin:.4f} (lower is better)")
