@@ -206,7 +206,7 @@ for file_idx, file in enumerate(files):
             scaler_user = StandardScaler()
             X_users_scaled = scaler_user.fit_transform(X_users)
             
-            n_clusters = 7 if window_type == "30min" else 5
+            n_clusters = 3
             kmeans_users = KMeans(n_clusters=n_clusters, random_state=42, n_init=20)
             user_clusters = kmeans_users.fit_predict(X_users_scaled)
             user_profiles['user_cluster'] = user_clusters

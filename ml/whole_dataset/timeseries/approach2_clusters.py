@@ -55,8 +55,8 @@ scaler_cluster = StandardScaler()
 X_cluster_scaled = scaler_cluster.fit_transform(X_cluster)
 
 # K-Means clustering
-print("\nPerforming K-Means clustering (K=4)...")
-kmeans = KMeans(n_clusters=4, random_state=42, n_init=20)
+print("\nPerforming K-Means clustering (K=2)...")
+kmeans = KMeans(n_clusters=2, random_state=42, n_init=20)
 user_profiles['user_cluster'] = kmeans.fit_predict(X_cluster_scaled)
 
 print("\nCluster distribution:")
@@ -203,10 +203,8 @@ def prepare_binary_data_timeseries(df, target_col, feature_cols):
     print(f"  Test - Low: {(y_test==0).sum()}, High: {(y_test==1).sum()}")
     
     # CALCULATE BASELINES ONLY ON TRAINING DATA (FIX FOR LEAKAGE)
-    
-    print(f"\n{'='*40}")
+
     print(f"CALCULATING BASELINES (TRAIN ONLY)")
-    print(f"{'='*40}")
     
     # Get original indices for training data
     train_original_idx = df_binary.iloc[train_idx].index
@@ -424,9 +422,7 @@ def train_evaluate_binary_models(X_train, X_val, X_test, y_train, y_val, y_test,
     
     # ENSEMBLE: Soft Voting (XGBoost + Random Forest + Logistic Regression)
     
-    print(f"\n{'='*80}")
     print(f"ENSEMBLE MODEL: Soft Voting (XGBoost + RF + LR)")
-    print(f"{'='*80}")
     
     # Create new instances for ensemble
     ensemble_lr = LogisticRegression(max_iter=1000, random_state=42, class_weight='balanced')

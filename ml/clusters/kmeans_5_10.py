@@ -228,7 +228,7 @@ for file_idx, file in enumerate(files):
     
     # Inertia (within-cluster sum of squares)
     axes[0].plot(k_range, inertias, 'bo-', linewidth=2, markersize=8)
-    axes[0].axvline(x=5, color='r', linestyle='--', linewidth=2, label='k=5 (chosen)')
+    axes[0].axvline(x=3, color='r', linestyle='--', linewidth=2, label='k=3 (chosen)')
     axes[0].set_xlabel('Number of Clusters (k)', fontsize=12)
     axes[0].set_ylabel('Inertia (Within-Cluster Sum of Squares)', fontsize=12)
     axes[0].set_title('Elbow Method - Inertia', fontsize=13, fontweight='bold')
@@ -237,7 +237,7 @@ for file_idx, file in enumerate(files):
     
     # Silhouette score
     axes[1].plot(k_range, silhouette_scores, 'go-', linewidth=2, markersize=8)
-    axes[1].axvline(x=5, color='r', linestyle='--', linewidth=2, label='k=5 (chosen)')
+    axes[1].axvline(x=3, color='r', linestyle='--', linewidth=2, label='k=3 (chosen)')
     axes[1].set_xlabel('Number of Clusters (k)', fontsize=12)
     axes[1].set_ylabel('Silhouette Score', fontsize=12)
     axes[1].set_title('Silhouette Score Analysis', fontsize=13, fontweight='bold')
@@ -270,7 +270,7 @@ for file_idx, file in enumerate(files):
     print(f"  Calinski-Harabasz Score: {calinski_harabasz:.2f} (higher is better)")
     
     print(f"\nCluster Sizes:")
-    for cluster_id in range(5):
+    for cluster_id in range(3):
         n = (user_clusters == cluster_id).sum()
         pct = n / len(user_clusters) * 100
         print(f"  Cluster {cluster_id}: {n:3d} users ({pct:5.1f}%)")
@@ -282,7 +282,7 @@ for file_idx, file in enumerate(files):
     # Calculate cluster centroids in original (unnormalized) space
     cluster_profiles = []
     
-    for cluster_id in range(5):
+    for cluster_id in range(3):
         cluster_mask = user_profiles['user_cluster'] == cluster_id
         cluster_data = user_profiles[cluster_mask]
         
@@ -351,7 +351,7 @@ for file_idx, file in enumerate(files):
     # 9.1. PCA Scatter Plot (2D)
     fig, ax = plt.subplots(figsize=(12, 8))
     
-    for cluster_id in range(5):
+    for cluster_id in range(3):
         cluster_mask = user_profiles['user_cluster'] == cluster_id
         cluster_data = user_profiles[cluster_mask]
         
@@ -367,7 +367,7 @@ for file_idx, file in enumerate(files):
     
     ax.set_xlabel(f'PC1 ({variance_explained[0]*100:.1f}% variance)', fontsize=13)
     ax.set_ylabel(f'PC2 ({variance_explained[1]*100:.1f}% variance)', fontsize=13)
-    ax.set_title(f'User Clusters - PCA Visualization\n{window_type} window (5 clusters, {len(user_profiles)} users)',
+    ax.set_title(f'User Clusters - PCA Visualization\n{window_type} window (3 clusters, {len(user_profiles)} users)',
                 fontsize=14, fontweight='bold')
     ax.legend(loc='best', fontsize=10)
     ax.grid(True, alpha=0.3)
@@ -390,7 +390,7 @@ for file_idx, file in enumerate(files):
         
         cluster_data_list = []
         cluster_labels = []
-        for cluster_id in range(5):
+        for cluster_id in range(3):
             cluster_mask = user_profiles['user_cluster'] == cluster_id
             cluster_data_list.append(user_profiles[cluster_mask][feat].values)
             cluster_labels.append(f'C{cluster_id}')
@@ -422,7 +422,7 @@ for file_idx, file in enumerate(files):
     # 9.3. Cluster Heatmap (Normalized Feature Means)
     # Create heatmap data
     heatmap_data = []
-    for cluster_id in range(5):
+    for cluster_id in range(3):
         cluster_mask = user_profiles['user_cluster'] == cluster_id
         cluster_means = []
         for feat in user_feature_cols:
@@ -431,7 +431,7 @@ for file_idx, file in enumerate(files):
     
     heatmap_df = pd.DataFrame(heatmap_data, 
                              columns=[f.replace('_', ' ').title() for f in user_feature_cols],
-                             index=[f'Cluster {i}' for i in range(5)])
+                             index=[f'Cluster {i}' for i in range(3)])
     
     # Normalize for better visualization
     heatmap_df_norm = (heatmap_df - heatmap_df.mean()) / heatmap_df.std()
@@ -466,7 +466,7 @@ for file_idx, file in enumerate(files):
             
             cluster_data_list = []
             cluster_labels = []
-            for cluster_id in range(5):
+            for cluster_id in range(3):
                 cluster_mask = user_profiles['user_cluster'] == cluster_id
                 cluster_data_list.append(user_profiles[cluster_mask][target_col].dropna().values)
                 cluster_labels.append(f'C{cluster_id}')
@@ -495,8 +495,8 @@ for file_idx, file in enumerate(files):
     # 9.5. Cluster Size Pie Chart
     fig, ax = plt.subplots(figsize=(10, 8))
     
-    cluster_sizes = [np.sum(user_clusters == i) for i in range(5)]
-    cluster_labels = [f'Cluster {i}\n({cluster_sizes[i]} users)' for i in range(5)]
+    cluster_sizes = [np.sum(user_clusters == i) for i in range(3)]
+    cluster_labels = [f'Cluster {i}\n({cluster_sizes[i]} users)' for i in range(3)]
     
     wedges, texts, autotexts = ax.pie(cluster_sizes, labels=cluster_labels, colors=cluster_colors,
                                        autopct='%1.1f%%', startangle=90, textprops={'fontsize': 11})
@@ -527,7 +527,7 @@ for file_idx, file in enumerate(files):
         fig = plt.figure(figsize=(14, 10))
         ax = fig.add_subplot(111, projection='3d')
         
-        for cluster_id in range(5):
+        for cluster_id in range(3):
             cluster_mask = user_clusters == cluster_id
             ax.scatter(X_pca_3d[cluster_mask, 0],
                       X_pca_3d[cluster_mask, 1],

@@ -279,10 +279,11 @@ print(f"\n Saved: elbow_method.png")
 plt.close()
 
 # 7. PERFORM CLUSTERING WITH K=4
-print(f"\n7. K-MEANS CLUSTERING (k=4)")
+n_clusters = 2
+print(f"\n7. K-MEANS CLUSTERING (k={n_clusters})")
 print("-"*80)
 
-kmeans_users = KMeans(n_clusters=4, random_state=42, n_init=20)
+kmeans_users = KMeans(n_clusters=n_clusters, random_state=42, n_init=20)
 user_clusters = kmeans_users.fit_predict(X_users_scaled)
 user_profiles['user_cluster'] = user_clusters
 
@@ -291,7 +292,7 @@ silhouette = silhouette_score(X_users_scaled, user_clusters)
 davies_bouldin = davies_bouldin_score(X_users_scaled, user_clusters)
 calinski_harabasz = calinski_harabasz_score(X_users_scaled, user_clusters)
 
-print(f"\n Clustering completed with 4 clusters")
+print(f"\n Clustering completed with {n_clusters} clusters")
 print(f"\nClustering Quality Metrics:")
 print(f"  Silhouette Score:        {silhouette:.4f} (higher is better, range: -1 to 1)")
 print(f"  Davies-Bouldin Index:    {davies_bouldin:.4f} (lower is better)")
@@ -299,7 +300,7 @@ print(f"  Calinski-Harabasz Score: {calinski_harabasz:.2f} (higher is better)")
 
 print(f"\nCluster Sizes:")
 cluster_sizes = []
-for cluster_id in range(2):
+for cluster_id in range(n_clusters):
     n = (user_clusters == cluster_id).sum()
     pct = n / len(user_clusters) * 100
     cluster_sizes.append(n)
@@ -312,7 +313,7 @@ print("-"*80)
 # Calculate cluster centroids in original (unnormalized) space
 cluster_profiles = []
 
-for cluster_id in range(2):
+for cluster_id in range(n_clusters):
     cluster_mask = user_profiles['user_cluster'] == cluster_id
     cluster_data = user_profiles[cluster_mask]
     
@@ -458,7 +459,7 @@ cluster_colors = ['#FF6B6B', '#4ECDC4']
 # 10.1. PCA Scatter Plot (2D)
 fig, ax = plt.subplots(figsize=(12, 8))
 
-for cluster_id in range(2):
+for cluster_id in range(n_clusters):
     cluster_mask = user_profiles['user_cluster'] == cluster_id
     cluster_data = user_profiles[cluster_mask]
     
@@ -497,7 +498,7 @@ for idx, feat in enumerate(user_feature_cols):
     
     cluster_data_list = []
     cluster_labels = []
-    for cluster_id in range(2):
+    for cluster_id in range(n_clusters):
         cluster_mask = user_profiles['user_cluster'] == cluster_id
         # FIXED: Flatten to ensure 1D array
         data = user_profiles[cluster_mask][feat].values
@@ -533,7 +534,7 @@ plt.close()
 # 10.3. Cluster Heatmap (Normalized Feature Means)
 # Create heatmap data
 heatmap_data = []
-for cluster_id in range(2):
+for cluster_id in range(n_clusters):
     cluster_mask = user_profiles['user_cluster'] == cluster_id
     cluster_means = []
     for feat in user_feature_cols:
@@ -541,13 +542,13 @@ for cluster_id in range(2):
         mean_val = user_profiles[cluster_mask][feat].mean()
         # Convert to scalar if it's a Series or array
         if isinstance(mean_val, (pd.Series, np.ndarray)):
-            mean_val = float(mean_val.item()) if mean_val.size == 1 else float(mean_val[0])
+            mean_val = float(mean_val.item()) if mean_val.size == 1 else float(mean_val.iloc[0])
         cluster_means.append(float(mean_val))
     heatmap_data.append(cluster_means)
 
 heatmap_df = pd.DataFrame(heatmap_data, 
                          columns=[f.replace('_', ' ').title() for f in user_feature_cols],
-                         index=[f'Cluster {i}' for i in range(2)])
+                         index=[f'Cluster {i}' for i in range(n_clusters)])
 
 # FIXED: Normalize with safety check for zero std
 heatmap_std = heatmap_df.std()
@@ -585,7 +586,7 @@ if 'avg_stress' in user_profiles.columns or 'avg_anxiety' in user_profiles.colum
         
         cluster_data_list = []
         cluster_labels = []
-        for cluster_id in range(2):
+        for cluster_id in range(n_clusters):
             cluster_mask = user_profiles['user_cluster'] == cluster_id
             # FIXED: Flatten to ensure 1D array
             data = user_profiles[cluster_mask][target_col].dropna().values
@@ -618,7 +619,7 @@ if 'avg_stress' in user_profiles.columns or 'avg_anxiety' in user_profiles.colum
 # 10.5. Cluster Size Pie Chart
 fig, ax = plt.subplots(figsize=(10, 8))
 
-cluster_labels_pie = [f'Cluster {i}\n({cluster_sizes[i]} users)' for i in range(2)]
+cluster_labels_pie = [f'Cluster {i}\n({cluster_sizes[i]} users)' for i in range(n_clusters)]
 
 wedges, texts, autotexts = ax.pie(cluster_sizes, labels=cluster_labels_pie, colors=cluster_colors,
                                    autopct='%1.1f%%', startangle=90, textprops={'fontsize': 11})
@@ -649,7 +650,7 @@ if len(user_feature_cols) >= 3:
     fig = plt.figure(figsize=(14, 10))
     ax = fig.add_subplot(111, projection='3d')
     
-    for cluster_id in range(2):
+    for cluster_id in range(n_clusters):
         cluster_mask = user_clusters == cluster_id
         ax.scatter(X_pca_3d[cluster_mask, 0],
                   X_pca_3d[cluster_mask, 1],

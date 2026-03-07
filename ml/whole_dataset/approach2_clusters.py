@@ -58,8 +58,8 @@ scaler_cluster = StandardScaler()
 X_cluster_scaled = scaler_cluster.fit_transform(X_cluster)
 
 # K-Means clustering
-print("\nPerforming K-Means clustering (K=4)...")
-kmeans = KMeans(n_clusters=4, random_state=42, n_init=20)
+print("\nPerforming K-Means clustering (K=2)...")
+kmeans = KMeans(n_clusters=2, random_state=42, n_init=20)
 user_profiles['user_cluster'] = kmeans.fit_predict(X_cluster_scaled)
 
 print("\nCluster distribution:")
@@ -500,12 +500,9 @@ anxiety_results = train_evaluate_binary_models(
 
 # FINAL SUMMARY
 
-print("\n" + "="*80)
 print("FINAL SUMMARY - BINARY CLASSIFICATION WITH CLUSTERING")
 
-print("\n" + "-"*80)
 print("STRESS LEVEL PREDICTION (Binary: Low vs High)")
-print("-"*80)
 print(f"{'Model':<35} {'Val Acc':<12} {'Test Acc':<12} {'Test F1':<12} {'Test AUC':<12}")
 print("-"*80)
 for model_name, metrics in stress_results.items():

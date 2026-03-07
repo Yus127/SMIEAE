@@ -206,11 +206,12 @@ for file_idx, file in enumerate(files):
             scaler_user = StandardScaler()
             X_users_scaled = scaler_user.fit_transform(X_users)
             
-            kmeans_users = KMeans(n_clusters=3, random_state=42, n_init=20)
+            n_clusters = 3
+            kmeans_users = KMeans(n_clusters=n_clusters, random_state=42, n_init=20)
             user_clusters = kmeans_users.fit_predict(X_users_scaled)
             user_profiles['user_cluster'] = user_clusters
 
-            print(f" Created 3 user clusters (based on physiology, NOT {target_name.lower()})")
+            print(f" Created {n_clusters} user clusters (based on physiology, NOT {target_name.lower()})")
         else:
             user_profiles['user_cluster'] = 0
             print(" Limited features for clustering")
