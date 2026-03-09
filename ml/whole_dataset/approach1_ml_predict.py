@@ -8,6 +8,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
+import lightgbm as lgb
 from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import (classification_report, confusion_matrix, roc_curve, auc,
@@ -23,6 +24,7 @@ import os
 
 # PATHS
 INPUT_PATH = '/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/data_with_exam_features.csv'
+WINDOW_PATH = '/Users/YusMolina/Downloads/smieae/data/ml_ready/enriched/ml_ready_60min_window_enriched.csv'
 OUTPUT_DIR = '/Users/YusMolina/Downloads/smieae/results/whole_dataset/random_split/model1/'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -30,6 +32,30 @@ print("MULTI-MODEL COMPARISON: STRESS & ANXIETY PREDICTION")
 
 df = pd.read_csv(INPUT_PATH)
 print(f"\nDataset: {len(df)} rows, {len(df.columns)} columns")
+
+# ── Add 60-min pre-questionnaire window HR features (aggregated to daily level) ──
+win_df = pd.read_csv(WINDOW_PATH)
+win_df['q_date_only'] = pd.to_datetime(win_df['q_date_only'])
+
+win_hr_cols = {
+    'heart_rate_activity_beats per minute_mean':   'win60_hr_mean',
+    'heart_rate_activity_beats per minute_std':    'win60_hr_std',
+    'heart_rate_activity_beats per minute_min':    'win60_hr_min',
+    'heart_rate_activity_beats per minute_max':    'win60_hr_max',
+    'heart_rate_activity_beats per minute_median': 'win60_hr_median',
+    'record_count': 'win60_record_count',
+}
+existing_win_cols = {k: v for k, v in win_hr_cols.items() if k in win_df.columns}
+win_agg = (win_df.rename(columns=existing_win_cols)
+                 .groupby(['userid', 'q_date_only'])[list(existing_win_cols.values())]
+                 .mean()
+                 .reset_index()
+                 .rename(columns={'q_date_only': 'unified_date'}))
+
+df['unified_date'] = pd.to_datetime(df['unified_date'])
+df = df.merge(win_agg, on=['userid', 'unified_date'], how='left')
+WIN60_FEATURES = [c for c in existing_win_cols.values() if c in df.columns]
+print(f"Added {len(WIN60_FEATURES)} window HR features (60-min, aggregated to daily)")
 
 # Feature columns
 feature_columns = [
@@ -41,7 +67,9 @@ feature_columns = [
     'daily_hrv_summary_entropy', 'heart_rate_activity_beats per minute_mean',
     'is_exam_period', 'is_semana_santa', 'days_to_next_exam',
     'days_since_last_exam', 'weeks_to_next_exam', 'weeks_since_last_exam'
-]
+] + WIN60_FEATURES
+# Keep only columns that actually exist in df
+feature_columns = [c for c in feature_columns if c in df.columns]
 
 def create_target_classes(series, p33, p67):
     classes = pd.cut(series, bins=[-np.inf, p33, p67, np.inf], labels=[0, 1, 2])
@@ -80,38 +108,50 @@ print("\nInitializing models...")
 
 models = {
     'Logistic Regression': LogisticRegression(
-        multi_class='multinomial',
         solver='lbfgs',
         max_iter=1000,
         random_state=42,
         C=1.0
     ),
     'Random Forest': RandomForestClassifier(
-        n_estimators=100,
-        max_depth=10,
-        min_samples_split=5,
-        min_samples_leaf=2,
+        n_estimators=200,
+        max_depth=8,
+        min_samples_leaf=3,
+        class_weight='balanced',
         random_state=42,
         n_jobs=-1
     ),
     'XGBoost': XGBClassifier(
-        n_estimators=50,
-        max_depth=3,
+        n_estimators=150,
+        max_depth=4,
         learning_rate=0.05,
-        min_child_weight=5,
         subsample=0.8,
         colsample_bytree=0.8,
+        min_child_weight=5,
         reg_alpha=0.1,
         reg_lambda=1.0,
         random_state=42,
-        eval_metric='mlogloss',
-        use_label_encoder=False
+        eval_metric='mlogloss'
+    ),
+    'LightGBM': lgb.LGBMClassifier(
+        n_estimators=200,
+        max_depth=5,
+        learning_rate=0.05,
+        num_leaves=31,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        min_child_samples=10,
+        class_weight='balanced',
+        random_state=42,
+        verbosity=-1,
+        n_jobs=-1
     ),
     'SVM (RBF)': SVC(
         kernel='rbf',
         C=1.0,
         gamma='scale',
         probability=True,
+        class_weight='balanced',
         random_state=42
     ),
     'Naive Bayes': GaussianNB()
@@ -216,7 +256,7 @@ metric_names = ['Accuracy', 'Precision\n(Macro)', 'Recall\n(Macro)', 'F1\n(Macro
 x = np.arange(len(metric_names))
 width = 0.15
 
-colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#8c564b', '#9467bd']
 
 for i, model_name in enumerate(models.keys()):
     metrics = stress_metrics[model_name]['test']
@@ -263,7 +303,7 @@ print("Saved: model_comparison_test.png")
 
 # VISUALIZATION 2: CONFUSION MATRICES FOR ALL MODELS
 
-fig, axes = plt.subplots(5, 2, figsize=(14, 28))
+fig, axes = plt.subplots(6, 2, figsize=(14, 34))
 fig.suptitle('Confusion Matrices: All Models (Test Set)', fontsize=16, fontweight='bold')
 
 for i, model_name in enumerate(models.keys()):
@@ -293,7 +333,7 @@ def plot_roc_curves_multimodel(y_true, results_dict, ax, title, n_classes=3):
     """Plot ROC curves for multiple models"""
     y_true_bin = label_binarize(y_true, classes=[0, 1, 2])
     
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#8c564b', '#9467bd']
     
     for i, (model_name, color) in enumerate(zip(results_dict.keys(), colors)):
         y_pred_proba = results_dict[model_name]['test_proba']

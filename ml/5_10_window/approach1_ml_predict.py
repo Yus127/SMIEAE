@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold, TimeSeriesSplit
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import SVC
@@ -14,6 +15,7 @@ from sklearn.metrics import (classification_report, confusion_matrix,
 from sklearn.preprocessing import label_binarize
 from itertools import cycle
 import xgboost as xgb
+import lightgbm as lgb
 import shap
 import warnings
 warnings.filterwarnings('ignore')
@@ -29,10 +31,15 @@ print("TIME-SERIES SPLIT: 70% TRAIN - 15% VALIDATION - 15% TEST")
 # Paths
 ml_dir = "/Users/YusMolina/Downloads/smieae/data/ml_ready"
 output_dir = "/Users/YusMolina/Downloads/smieae/results/5_10_dataset/timeseries/model1"
+DAILY_PATH = "/Users/YusMolina/Downloads/smieae/data/data_clean/csv_joined/data_with_exam_features.csv"
 import os
 os.makedirs(output_dir, exist_ok=True)
 os.makedirs(os.path.join(output_dir, "plots"), exist_ok=True)
 os.makedirs(os.path.join(output_dir, "shap"), exist_ok=True)
+
+# Load daily Fitbit data once (used to enrich window data with full physiological features)
+daily_df = pd.read_csv(DAILY_PATH)
+daily_df['unified_date'] = pd.to_datetime(daily_df['unified_date'])
 
 # Define files to process
 files = [
@@ -69,8 +76,45 @@ for file_idx, file in enumerate(files):
     
     df = pd.read_csv(data_file)
     print(f" Loaded {len(df)} observations")
-    
-    # Define feature columns for this window
+
+    # Rename window HR columns to avoid name conflicts when joining daily HR data
+    win_hr_rename = {
+        'heart_rate_activity_beats per minute_mean':   'win_hr_mean',
+        'heart_rate_activity_beats per minute_std':    'win_hr_std',
+        'heart_rate_activity_beats per minute_min':    'win_hr_min',
+        'heart_rate_activity_beats per minute_max':    'win_hr_max',
+        'heart_rate_activity_beats per minute_median': 'win_hr_median',
+        'record_count': 'win_record_count',
+    }
+    df = df.rename(columns={k: v for k, v in win_hr_rename.items() if k in df.columns})
+
+    # Join daily Fitbit features (sleep, HRV, SpO2, respiratory rate, etc.)
+    DAILY_ADD_FEATURES = [
+        'sleep_global_duration', 'sleep_global_efficiency',
+        'deep_sleep_minutes', 'rem_sleep_minutes', 'light_sleep_minutes',
+        'wake_count', 'sleep_stage_transitions',
+        'micro_awakening_per_hour', 'minutes_to_first_deep_sleep',
+        'daily_hrv_summary_rmssd', 'daily_hrv_summary_entropy',
+        'hrv_details_rmssd_mean', 'hrv_details_rmssd_min',
+        'lf_hf_ratio_hrv_mean',
+        'daily_respiratory_rate_daily_respiratory_rate',
+        'daily_spo2_average_value', 'minute_spo2_value_mean',
+        'heart_rate_activity_beats per minute_mean',   # daily mean HR (different from window HR)
+        'heart_rate_activity_beats per minute_std',    # daily std HR
+        'activity_level_sedentary_count',
+    ]
+    # Only add daily features that are NOT already in the window df
+    avail_daily = [c for c in DAILY_ADD_FEATURES if c in daily_df.columns and c not in df.columns]
+    daily_clean = daily_df[['userid', 'unified_date'] + avail_daily].drop_duplicates(subset=['userid', 'unified_date']).copy()
+
+    if 'q_date_only' in df.columns:
+        df['q_date_only'] = pd.to_datetime(df['q_date_only'])
+        df = df.merge(daily_clean, left_on=['userid', 'q_date_only'],
+                      right_on=['userid', 'unified_date'], how='left')
+        df = df.drop(columns=['unified_date'], errors='ignore')
+
+    # Build feature list: context + window HR + daily Fitbit
+    WIN_HR_FEATURES = ['win_hr_mean', 'win_hr_std', 'win_hr_min', 'win_hr_max', 'win_hr_median', 'win_record_count']
     feature_columns = [
         'is_exam_period',
         'days_until_exam',
@@ -78,20 +122,11 @@ for file_idx, file in enumerate(files):
         'is_easter_break',
         'daily_total_steps',
     ]
-    
-    # Add window-specific heart rate features
-    hr_features = [
-        f'{window_prefix}_heart_rate_activity_beats per minute_mean',
-        f'{window_prefix}_heart_rate_activity_beats per minute_std',
-        f'{window_prefix}_heart_rate_activity_beats per minute_min',
-        f'{window_prefix}_heart_rate_activity_beats per minute_max',
-        f'{window_prefix}_heart_rate_activity_beats per minute_median',
-    ]
-    
-    feature_columns.extend(hr_features)
-    
+    feature_columns.extend([c for c in WIN_HR_FEATURES if c in df.columns])
+    feature_columns.extend([c for c in avail_daily if c in df.columns])
+
     available_features = [col for col in feature_columns if col in df.columns]
-    print(f"\n Using {len(available_features)} features")
+    print(f"\n Using {len(available_features)} features: context + window HR + daily Fitbit")
     
     # Identify target variables - both stress and anxiety
     target_columns = [col for col in df.columns if col.startswith('q_i_stress') or col.startswith('q_i_anxiety')]
@@ -145,9 +180,15 @@ for file_idx, file in enumerate(files):
         print("-"*80)
         
         # Sort by timestamp if available (important for time series split)
-        if 'timestamp' in df.columns:
+        if 'response_timestamp' in df.columns:
+            df_sorted = df.sort_values('response_timestamp').reset_index(drop=True)
+            print(" Data sorted by response_timestamp (chronological order)")
+        elif 'timestamp' in df.columns:
             df_sorted = df.sort_values('timestamp').reset_index(drop=True)
             print(" Data sorted by timestamp (chronological order)")
+        elif 'q_date_only' in df.columns:
+            df_sorted = df.sort_values('q_date_only').reset_index(drop=True)
+            print(" Data sorted by q_date_only (chronological order)")
         elif 'date' in df.columns:
             df_sorted = df.sort_values('date').reset_index(drop=True)
             print(" Data sorted by date (chronological order)")
@@ -239,10 +280,15 @@ for file_idx, file in enumerate(files):
         print("-"*80)
         print("Applying StandardScaler (Z-score normalization)")
         
+        imputer = SimpleImputer(strategy='median')
+        X_train_imputed = imputer.fit_transform(X_train_raw)
+        X_val_imputed = imputer.transform(X_val_raw)
+        X_test_imputed = imputer.transform(X_test_raw)
+
         scaler_standard = StandardScaler()
-        X_train_standard = scaler_standard.fit_transform(X_train_raw)
-        X_val_standard = scaler_standard.transform(X_val_raw)
-        X_test_standard = scaler_standard.transform(X_test_raw)
+        X_train_standard = scaler_standard.fit_transform(X_train_imputed)
+        X_val_standard = scaler_standard.transform(X_val_imputed)
+        X_test_standard = scaler_standard.transform(X_test_imputed)
         
         X_train = pd.DataFrame(X_train_standard, columns=available_features, index=X_train_raw.index)
         X_val = pd.DataFrame(X_val_standard, columns=available_features, index=X_val_raw.index)
@@ -257,11 +303,48 @@ for file_idx, file in enumerate(files):
         
         # Define models
         models = {
-            'Logistic Regression': LogisticRegression(random_state=42, max_iter=1000, multi_class='multinomial'),
-            'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42, max_depth=10),
-            'XGBoost': xgb.XGBClassifier(random_state=42, n_estimators=100, max_depth=6,
-                                         learning_rate=0.1, objective='multi:softmax', num_class=3),
-            'SVM': SVC(kernel='rbf', probability=True, random_state=42, decision_function_shape='ovr'),
+            'Logistic Regression': LogisticRegression(random_state=42, max_iter=1000),
+            'Random Forest': RandomForestClassifier(
+                n_estimators=200,
+                max_depth=8,
+                min_samples_leaf=3,
+                class_weight='balanced',
+                random_state=42,
+                n_jobs=-1
+            ),
+            'XGBoost': xgb.XGBClassifier(
+                n_estimators=150,
+                max_depth=4,
+                learning_rate=0.05,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                min_child_weight=5,
+                reg_alpha=0.1,
+                reg_lambda=1.0,
+                random_state=42,
+                eval_metric='mlogloss'
+            ),
+            'LightGBM': lgb.LGBMClassifier(
+                n_estimators=200,
+                max_depth=5,
+                learning_rate=0.05,
+                num_leaves=31,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                min_child_samples=10,
+                class_weight='balanced',
+                random_state=42,
+                verbosity=-1,
+                n_jobs=-1
+            ),
+            'SVM': SVC(
+                kernel='rbf',
+                C=1.0,
+                gamma='scale',
+                probability=True,
+                class_weight='balanced',
+                random_state=42
+            ),
             'Naive Bayes': GaussianNB()
         }
 
@@ -386,7 +469,7 @@ for file_idx, file in enumerate(files):
         fig, ax = plt.subplots(figsize=(12, 8))
         
         # Define colors for different models
-        model_colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#95E1D3', '#F38181']
+        model_colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#8c564b', '#95E1D3', '#F38181']
         
         for (model_name, result), color in zip(results.items(), model_colors):
             y_score = result['y_test_proba']
